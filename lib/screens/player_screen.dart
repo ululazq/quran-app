@@ -7,7 +7,6 @@ import '../services/quran_api_service.dart';
 import '../models/qari_model.dart';
 import '../models/backsound_model.dart';
 import '../models/ayah_model.dart';
-import '../widgets/backsound_visualizer.dart';
 import '../widgets/ambient_background.dart';
 import '../theme/app_theme.dart';
 
@@ -722,7 +721,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 slivers: [
                   _buildAppBar(player, api),
                   _buildNowPlaying(player),
-                  _buildVisualizer(player),
                   _buildProgressBar(player),
                   _buildYouTubeStyleControls(player),
                   _buildSecondaryUtilityRow(player, api),
@@ -867,136 +865,88 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Widget _buildAppBar(AudioPlayerService player, QuranApiService api) {
     return SliverAppBar(
-      expandedHeight: 80,
+      expandedHeight: 60,
       floating: false,
-      pinned: true,
+      pinned: false,
       backgroundColor: Colors.transparent,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.textPrimary, size: 34),
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: AppTheme.textPrimary,
+          size: 34,
+          shadows: [Shadow(color: Colors.black87, blurRadius: 10)],
+        ),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.queue_music_rounded, color: AppTheme.textPrimary, size: 24),
+          icon: const Icon(
+            Icons.queue_music_rounded,
+            color: AppTheme.textPrimary,
+            size: 24,
+            shadows: [Shadow(color: Colors.black87, blurRadius: 10)],
+          ),
           tooltip: 'Daftar Putar Surah',
           onPressed: () => _showPlaylistBottomSheet(context),
         ),
         IconButton(
-          icon: const Icon(Icons.tune_rounded, color: AppTheme.textPrimary, size: 24),
+          icon: const Icon(
+            Icons.tune_rounded,
+            color: AppTheme.textPrimary,
+            size: 24,
+            shadows: [Shadow(color: Colors.black87, blurRadius: 10)],
+          ),
           tooltip: 'Mixer & Suara Alam',
           onPressed: () => _showVolumeMixerBottomSheet(context),
         ),
+        const SizedBox(width: 4),
       ],
-      flexibleSpace: FlexibleSpaceBar(
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'MEMUTAR SURAH',
-              style: TextStyle(
-                color: AppTheme.primaryEmerald,
-                fontWeight: FontWeight.bold,
-                fontSize: 10,
-                letterSpacing: 1.5,
-              ),
-            ),
-            Text(
-              player.currentSurah?.name ?? '',
-              style: const TextStyle(
-                color: AppTheme.textPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-        titlePadding: const EdgeInsets.only(bottom: 12),
-        centerTitle: true,
-      ),
     );
   }
 
   Widget _buildNowPlaying(AudioPlayerService player) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        padding: const EdgeInsets.fromLTRB(24, 48, 24, 32),
         child: Column(
           children: [
-            // Album art with glowing emerald gradient
-            Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppTheme.emeraldGradient,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryEmerald.withValues(alpha: 0.35),
-                    blurRadius: 28,
-                    spreadRadius: 4,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-                border: Border.all(
-                  color: AppTheme.primaryEmeraldLight.withValues(alpha: 0.6),
-                  width: 3,
-                ),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 130,
-                    height: 130,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                  const Icon(
-                    Icons.auto_stories_rounded,
-                    size: 68,
-                    color: Colors.black,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-
-            // Surah Name (English)
-            Text(
-              player.currentSurah?.name ?? '',
-              style: const TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.3,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-
-            // Arabic Name
+            // Elegant & Majestic Arabic Surah Name Calligraphy
             Text(
               player.currentSurah?.nameArabic ?? '',
               textDirection: TextDirection.rtl,
+              textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppTheme.accentGoldLight,
-                fontSize: 18,
+                color: AppTheme.textPrimary,
+                fontSize: 44,
                 fontWeight: FontWeight.bold,
+                height: 1.4,
+                shadows: [
+                  Shadow(
+                    color: Colors.black87,
+                    blurRadius: 24,
+                    offset: Offset(0, 4),
+                  ),
+                  Shadow(
+                    color: Colors.black54,
+                    blurRadius: 12,
+                    offset: Offset(0, 2),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
 
-            // Qari Name
+            // Minimalist Qari Name
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.mic_rounded, color: AppTheme.primaryEmerald, size: 16),
+                const Icon(
+                  Icons.mic_rounded,
+                  color: AppTheme.primaryEmerald,
+                  size: 15,
+                  shadows: [Shadow(color: Colors.black87, blurRadius: 8)],
+                ),
                 const SizedBox(width: 6),
                 Text(
                   player.currentQari?.name ?? 'Qari',
@@ -1004,52 +954,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     color: AppTheme.primaryEmeraldLight,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black87,
+                        blurRadius: 12,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-
-            // Revelation tag & Verses
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppTheme.bgSurface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.divider, width: 1),
-              ),
-              child: Text(
-                '${player.currentSurah?.revelationType.toUpperCase()} • ${player.currentSurah?.verses ?? 0} AYAT',
-                style: const TextStyle(
-                  color: AppTheme.textTertiary,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVisualizer(AudioPlayerService player) {
-    String? activeId;
-    for (final b in Backsound.presets) {
-      if (player.isBacksoundActive(b.id)) {
-        activeId = b.id;
-        break;
-      }
-    }
-
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-        child: BacksoundVisualizer(
-          activeBacksoundId: activeId,
-          isPlaying: player.isPlaying,
-          height: 44,
         ),
       ),
     );
