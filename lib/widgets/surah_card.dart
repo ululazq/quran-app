@@ -16,7 +16,7 @@ class SurahCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: isSelected ? const Color(0xFF1DB954).withOpacity(0.2) : const Color(0xFF1E1E1E),
+      color: isSelected ? const Color(0xFF1DB954).withValues(alpha: 0.2) : const Color(0xFF1E1E1E),
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: onTap,

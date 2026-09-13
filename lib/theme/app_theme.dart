@@ -34,7 +34,7 @@ class AppTheme {
       ),
       iconTheme: IconThemeData(color: _textPrimary),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: _surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -49,7 +49,7 @@ class AppTheme {
       activeTrackColor: _primary,
       inactiveTrackColor: _textTertiary,
       thumbColor: _primary,
-      overlayColor: _primary.withOpacity(0.2),
+      overlayColor: _primary.withValues(alpha: 0.2),
       trackHeight: 4,
       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
     ),

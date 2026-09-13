@@ -177,7 +177,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 activeTrackColor: const Color(0xFF1DB954),
                 inactiveTrackColor: Colors.grey[800],
                 thumbColor: Colors.white,
-                overlayColor: const Color(0xFF1DB954).withOpacity(0.2),
+                overlayColor: const Color(0xFF1DB954).withValues(alpha: 0.2),
                 trackHeight: 4,
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
               ),
