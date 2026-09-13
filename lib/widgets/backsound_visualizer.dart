@@ -1,4 +1,4 @@
-﻿import 'dart:math';
+import 'dart:math';
 import 'package:flutter/material.dart';
 
 class BacksoundVisualizer extends StatefulWidget {
@@ -38,13 +38,22 @@ class _BacksoundVisualizerState extends State<BacksoundVisualizer>
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.isPlaying) {
+    final hasActiveBacksound = widget.activeBacksoundId != null;
+
+    if (!widget.isPlaying && !hasActiveBacksound) {
       return SizedBox(
         height: widget.height,
         child: const Center(
-          child: Text(
-            'Audio Dijeda',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.pause_circle_outline, size: 16, color: Colors.grey),
+              SizedBox(width: 6),
+              Text(
+                'Audio Dijeda',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
           ),
         ),
       );

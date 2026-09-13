@@ -7,6 +7,7 @@ import '../models/backsound_model.dart';
 import '../models/qari_model.dart';
 import '../widgets/surah_card.dart';
 import '../widgets/qari_card.dart';
+import '../widgets/mini_player.dart';
 import 'player_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -65,7 +66,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const MiniPlayer(),
+          _buildBottomNav(),
+        ],
+      ),
     );
   }
 
@@ -105,42 +112,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
-          ),
-          const Spacer(),
-          Consumer<AudioPlayerService>(
-            builder: (context, player, _) {
-              if (player.currentSurah != null && player.isPlaying) {
-                return GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PlayerScreen()),
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1DB954),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.equalizer, color: Colors.black, size: 16),
-                        SizedBox(width: 4),
-                        Text(
-                          'Now Playing',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
           ),
         ],
       ),

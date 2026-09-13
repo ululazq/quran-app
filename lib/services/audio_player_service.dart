@@ -21,6 +21,7 @@ class AudioPlayerService extends ChangeNotifier {
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
   bool _autoPlayNext = true;
+  bool _isChangingTrack = false;
   Timer? _positionTimer;
 
   List<Surah> get surahList => _surahList;
@@ -31,6 +32,7 @@ class AudioPlayerService extends ChangeNotifier {
   Duration get position => _position;
   Duration get duration => _duration;
   bool get isPlaying => _isPlaying;
+  bool get isChangingTrack => _isChangingTrack;
   bool get isSeekable => _duration.inSeconds > 0;
   bool get autoPlayNext => _autoPlayNext;
 
@@ -88,11 +90,13 @@ class AudioPlayerService extends ChangeNotifier {
 
     _quranPlayer.playerStateStream.listen((state) {
       _playerState = state;
-      _isPlaying = state.playing;
+      if (!_isChangingTrack) {
+        _isPlaying = state.playing;
+      }
       notifyListeners();
 
       if (state.processingState == ProcessingState.completed) {
-        if (_autoPlayNext) {
+        if (_autoPlayNext && !_isChangingTrack) {
           playNext();
         }
       }
@@ -112,14 +116,18 @@ class AudioPlayerService extends ChangeNotifier {
   }
 
   Future<void> play(Qari qari, Surah surah) async {
+    if (_isChangingTrack) return;
+    _isChangingTrack = true;
     _currentQari = qari;
     _currentSurah = surah;
+    _isPlaying = true;
+    notifyListeners();
+
     final url = _buildAudioUrl(qari, surah.number);
     _currentUrl = url;
     debugPrint('Playing audio URL: $url');
 
     try {
-      await _quranPlayer.stop();
       await _quranPlayer.setAudioSource(
         AudioSource.uri(
           Uri.parse(url),
@@ -133,14 +141,17 @@ class AudioPlayerService extends ChangeNotifier {
       );
       await _quranPlayer.play();
       _startPositionTimer();
-      notifyListeners();
     } catch (e) {
       debugPrint('Error playing audio: $e');
+      _isPlaying = false;
+    } finally {
+      _isChangingTrack = false;
+      notifyListeners();
     }
   }
 
   Future<void> playNext() async {
-    if (_currentSurah == null) return;
+    if (_currentSurah == null || _isChangingTrack) return;
     final qari = _currentQari ?? Qari.defaultQaris.first;
 
     if (_surahList.isNotEmpty) {
@@ -166,11 +177,20 @@ class AudioPlayerService extends ChangeNotifier {
         revelationType: 'Makkiyah',
       );
       await play(qari, fallbackSurah);
+    } else {
+      const fallbackSurah = Surah(
+        number: 1,
+        name: 'Al-Fatihah',
+        nameArabic: 'الفاتحة',
+        verses: 7,
+        revelationType: 'Makkiyah',
+      );
+      await play(qari, fallbackSurah);
     }
   }
 
   Future<void> playPrevious() async {
-    if (_currentSurah == null) return;
+    if (_currentSurah == null || _isChangingTrack) return;
     final qari = _currentQari ?? Qari.defaultQaris.first;
 
     if (_surahList.isNotEmpty) {
@@ -196,6 +216,15 @@ class AudioPlayerService extends ChangeNotifier {
         revelationType: 'Makkiyah',
       );
       await play(qari, fallbackSurah);
+    } else {
+      const fallbackSurah = Surah(
+        number: 114,
+        name: 'An-Nas',
+        nameArabic: 'الناس',
+        verses: 6,
+        revelationType: 'Makkiyah',
+      );
+      await play(qari, fallbackSurah);
     }
   }
 
@@ -215,6 +244,7 @@ class AudioPlayerService extends ChangeNotifier {
     await _quranPlayer.stop();
     _positionTimer?.cancel();
     _position = Duration.zero;
+    _currentSurah = null;
     notifyListeners();
   }
 
@@ -248,7 +278,6 @@ class AudioPlayerService extends ChangeNotifier {
   }
 
   Future<void> playBacksound(Backsound backsound) async {
-    // Stop other active backsounds so only one clean ambient sound plays at a time
     for (final otherId in _activeBacksoundIds.toList()) {
       if (otherId != backsound.id) {
         await stopBacksound(otherId);
