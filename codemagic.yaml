@@ -9,7 +9,7 @@ workflows:
       vars:
         PACKAGE_NAME: "com.example.quran_app"
         BUILD_NUMBER: 1
-      flutter: "3.22.0"
+      flutter: "3.27.0"
       xcode: latest
     platform: android
     scripts:
