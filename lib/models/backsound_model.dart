@@ -21,44 +21,44 @@ class Backsound extends Equatable {
   static const List<Backsound> presets = [
     Backsound(
       id: 'rain',
-      name: 'Rain',
-      nameAr: 'hujan',
-      assetPath: 'https://www.soundjay.com/weather/rain-01.mp3',
+      name: 'Hujan (Rain)',
+      nameAr: 'مطر',
+      assetPath: 'https://ia801309.us.archive.org/11/items/RainSounds_201603/Rain.mp3',
       icon: Icons.water_drop,
     ),
     Backsound(
       id: 'ocean',
-      name: 'Ocean Waves',
-      nameAr: 'ombak',
-      assetPath: 'https://www.soundjay.com/weather/ocean-waves-1.mp3',
+      name: 'Ombak (Ocean)',
+      nameAr: 'أمواج',
+      assetPath: 'https://ia800201.us.archive.org/13/items/OceanWavesCrashing/Ocean%20Waves.mp3',
       icon: Icons.waves,
     ),
     Backsound(
       id: 'wind',
-      name: 'Wind',
-      nameAr: 'angin',
-      assetPath: 'https://www.soundjay.com/weather/wind-1.mp3',
+      name: 'Angin (Wind)',
+      nameAr: 'رياح',
+      assetPath: 'https://ia800302.us.archive.org/27/items/WindSounds_201603/Wind.mp3',
       icon: Icons.air,
     ),
     Backsound(
       id: 'birds',
-      name: 'Birds',
-      nameAr: 'burung',
-      assetPath: 'https://www.soundjay.com/birds/bird-chirping-1.mp3',
-      icon: Icons.paragliding,
+      name: 'Burung (Birds)',
+      nameAr: 'طيور',
+      assetPath: 'https://ia800204.us.archive.org/11/items/ForestBirdsSinging/ForestBirds.mp3',
+      icon: Icons.nature,
     ),
     Backsound(
       id: 'night',
-      name: 'Night Ambience',
-      nameAr: 'malam',
-      assetPath: 'https://www.soundjay.com/ambient/forest-night-1.mp3',
+      name: 'Malam (Night)',
+      nameAr: 'ليل',
+      assetPath: 'https://ia800301.us.archive.org/30/items/NightCricketsSound/NightCrickets.mp3',
       icon: Icons.nights_stay,
     ),
     Backsound(
       id: 'fireplace',
-      name: 'Fireplace',
-      nameAr: 'perapian',
-      assetPath: 'https://www.soundjay.com/fire/fireplace-1.mp3',
+      name: 'Perapian (Fire)',
+      nameAr: 'نار',
+      assetPath: 'https://ia800302.us.archive.org/17/items/FireplaceCracklingSound/Fireplace.mp3',
       icon: Icons.local_fire_department,
     ),
   ];
@@ -75,5 +75,5 @@ class Backsound extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name];
+  List<Object?> get props => [id, name, assetPath];
 }

@@ -119,6 +119,24 @@ class QuranApiService extends ChangeNotifier {
     return [];
   }
 
+  final Set<int> _favoriteSurahNumbers = {};
+
+  Set<int> get favoriteSurahNumbers => _favoriteSurahNumbers;
+
+  bool isFavorite(int surahNumber) => _favoriteSurahNumbers.contains(surahNumber);
+
+  void toggleFavorite(int surahNumber) {
+    if (_favoriteSurahNumbers.contains(surahNumber)) {
+      _favoriteSurahNumbers.remove(surahNumber);
+    } else {
+      _favoriteSurahNumbers.add(surahNumber);
+    }
+    notifyListeners();
+  }
+
+  List<Surah> get favoriteSurahs =>
+      _surahs.where((s) => _favoriteSurahNumbers.contains(s.number)).toList();
+
   void selectSurah(Surah surah) {
     _currentSurah = surah;
     notifyListeners();

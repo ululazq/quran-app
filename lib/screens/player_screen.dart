@@ -18,7 +18,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
   late StreamSubscription<Duration> _positionSubscription;
   late StreamSubscription<Duration?> _durationSubscription;
   
-  bool _isFavorite = false;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -75,17 +74,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
-        IconButton(
-          icon: Icon(
-            _isFavorite ? Icons.favorite : Icons.favorite_border,
-            color: _isFavorite ? Colors.red : Colors.white,
+        if (player.currentSurah != null)
+          IconButton(
+            icon: Icon(
+              api.isFavorite(player.currentSurah!.number) ? Icons.favorite : Icons.favorite_border,
+              color: api.isFavorite(player.currentSurah!.number) ? Colors.red : Colors.white,
+            ),
+            onPressed: () => api.toggleFavorite(player.currentSurah!.number),
           ),
-          onPressed: () => setState(() => _isFavorite = !_isFavorite),
-        ),
-        IconButton(
-          icon: const Icon(Icons.queue_music, color: Colors.white),
-          onPressed: () {},
-        ),
       ],
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
@@ -270,27 +266,36 @@ class _PlayerScreenState extends State<PlayerScreen> {
               runSpacing: 8,
               children: Backsound.presets.map((backsound) {
                 final isActive = player.isBacksoundActive(backsound.id);
+                final isLoading = player.isBacksoundLoading(backsound.id);
                 return Material(
                   color: isActive ? const Color(0xFF1DB954) : const Color(0xFF282828),
                   borderRadius: BorderRadius.circular(20),
                   child: InkWell(
-                    onTap: () {
-                      player.registerBacksound(backsound);
-                      player.toggleBacksound(backsound);
-                    },
+                    onTap: () => player.toggleBacksound(backsound),
                     borderRadius: BorderRadius.circular(20),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(backsound.icon, size: 16, color: isActive ? Colors.black : Colors.white),
-                          const SizedBox(width: 4),
+                          if (isLoading)
+                            const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          else
+                            Icon(backsound.icon, size: 16, color: isActive ? Colors.black : Colors.white),
+                          const SizedBox(width: 6),
                           Text(
                             backsound.name,
                             style: TextStyle(
                               color: isActive ? Colors.black : Colors.white,
                               fontSize: 12,
+                              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                             ),
                           ),
                         ],

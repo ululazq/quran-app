@@ -129,61 +129,78 @@ class AudioPlayerService extends ChangeNotifier {
   }
 
   // === Backsound Management ===
+  final Set<String> _activeBacksoundIds = {};
+  final Set<String> _loadingBacksoundIds = {};
 
-  void registerBacksound(Backsound backsound) {
-    if (_backsounds.containsKey(backsound.id)) return;
-
-    final player = AudioPlayer();
-    _backsounds[backsound.id] = player;
-    _volumes[backsound.id] = backsound.defaultVolume;
-
-    Future<void> loadAudio() async {
-      if (backsound.assetPath.startsWith('http')) {
-        await player.setUrl(backsound.assetPath);
-      } else {
-        await player.setAsset(backsound.assetPath);
-      }
-      player.setLoopMode(LoopMode.all);
-      notifyListeners();
-    }
-
-    loadAudio().catchError((e) {
-      debugPrint('Error loading backsound ${backsound.id}: $e');
-    });
-  }
+  bool isBacksoundActive(String id) => _activeBacksoundIds.contains(id);
+  bool isBacksoundLoading(String id) => _loadingBacksoundIds.contains(id);
+  double getBacksoundVolume(String id) => _volumes[id] ?? 0.3;
 
   Future<void> toggleBacksound(Backsound backsound) async {
-    final isActive = (_volumes[backsound.id] ?? 0) > 0;
-
-    if (isActive) {
-      await setBacksoundVolume(backsound.id, 0);
+    if (_activeBacksoundIds.contains(backsound.id)) {
+      await stopBacksound(backsound.id);
     } else {
-      await setBacksoundVolume(backsound.id, backsound.defaultVolume);
-      await _backsounds[backsound.id]?.play();
+      await playBacksound(backsound);
     }
+  }
+
+  Future<void> playBacksound(Backsound backsound) async {
+    _activeBacksoundIds.add(backsound.id);
+    _loadingBacksoundIds.add(backsound.id);
+    final volume = _volumes[backsound.id] ?? backsound.defaultVolume;
+    _volumes[backsound.id] = volume;
     notifyListeners();
+
+    try {
+      AudioPlayer? player = _backsounds[backsound.id];
+      if (player == null) {
+        player = AudioPlayer();
+        _backsounds[backsound.id] = player;
+        if (backsound.assetPath.startsWith('http')) {
+          await player.setUrl(backsound.assetPath);
+        } else {
+          await player.setAsset(backsound.assetPath);
+        }
+        await player.setLoopMode(LoopMode.all);
+      }
+      await player.setVolume(volume);
+      await player.play();
+    } catch (e) {
+      debugPrint('Error playing backsound ${backsound.id}: $e');
+      _activeBacksoundIds.remove(backsound.id);
+    } finally {
+      _loadingBacksoundIds.remove(backsound.id);
+      notifyListeners();
+    }
+  }
+
+  Future<void> stopBacksound(String id) async {
+    _activeBacksoundIds.remove(id);
+    _loadingBacksoundIds.remove(id);
+    notifyListeners();
+
+    try {
+      await _backsounds[id]?.pause();
+    } catch (e) {
+      debugPrint('Error pausing backsound $id: $e');
+    }
   }
 
   Future<void> setBacksoundVolume(String id, double volume) async {
     _volumes[id] = volume;
-    await _backsounds[id]?.setVolume(volume);
-
-    if (volume > 0 && !(_backsounds[id]?.playing ?? false)) {
-      await _backsounds[id]?.play();
-    } else if (volume == 0) {
-      await _backsounds[id]?.pause();
+    if (_activeBacksoundIds.contains(id)) {
+      await _backsounds[id]?.setVolume(volume);
     }
-
     notifyListeners();
   }
 
-  double getBacksoundVolume(String id) => _volumes[id] ?? 0;
-  bool isBacksoundActive(String id) => (_volumes[id] ?? 0) > 0;
-
   void _stopAllBacksounds() {
-    for (final player in _backsounds.values) {
-      player.pause();
+    for (final id in _activeBacksoundIds.toList()) {
+      _backsounds[id]?.pause();
     }
+    _activeBacksoundIds.clear();
+    _loadingBacksoundIds.clear();
+    notifyListeners();
   }
 
   void _startPositionTimer() {
