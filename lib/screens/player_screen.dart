@@ -32,20 +32,29 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _fetchAyahs() async {
+    if (!mounted) return;
     final player = context.read<AudioPlayerService>();
     final api = context.read<QuranApiService>();
     final surahNum = player.currentSurah?.number ?? 1;
 
     if (_lastLoadedSurah == surahNum && _loadedAyahs.isNotEmpty) return;
+    if (_isLoadingAyahs) return;
 
+    _lastLoadedSurah = surahNum;
     setState(() => _isLoadingAyahs = true);
-    final ayahs = await api.loadAyahs(surahNum);
-    if (mounted) {
-      setState(() {
-        _loadedAyahs = ayahs;
-        _lastLoadedSurah = surahNum;
-        _isLoadingAyahs = false;
-      });
+
+    try {
+      final ayahs = await api.loadAyahs(surahNum);
+      if (mounted) {
+        setState(() {
+          _loadedAyahs = ayahs;
+          _isLoadingAyahs = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingAyahs = false);
+      }
     }
   }
 
@@ -224,9 +233,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
             );
           }
 
-          // Auto update ayahs when surah changes
-          if (player.currentSurah?.number != _lastLoadedSurah) {
-            _fetchAyahs();
+          // Auto update ayahs safely when surah changes
+          if (player.currentSurah != null &&
+              player.currentSurah!.number != _lastLoadedSurah &&
+              !_isLoadingAyahs) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _fetchAyahs();
+            });
           }
 
           final filteredAyahs = _loadedAyahs.where((a) {
