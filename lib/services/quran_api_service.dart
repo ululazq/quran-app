@@ -37,7 +37,10 @@ class QuranApiService extends ChangeNotifier {
         final list = data['reciters'] as List? ?? [];
         final parsedQaris = list
             .map((e) => Qari.fromJson(e as Map<String, dynamic>))
-            .where((q) => q.server.isNotEmpty)
+            .where((q) =>
+                q.server.isNotEmpty &&
+                !Qari.unavailableQariIds.contains(q.id) &&
+                (q.files == null || q.files! >= 114))
             .toList();
 
         if (parsedQaris.isNotEmpty) {
