@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:audioplayers/audioplayers.dart' as ap;
@@ -6,6 +7,12 @@ import 'package:flutter/foundation.dart';
 import '../models/qari_model.dart';
 import '../models/surah_model.dart';
 import '../models/backsound_model.dart';
+
+enum QuranLoopMode {
+  all, // Loop playlist / Auto-advance
+  one, // Repeat current surah
+  off, // Stop after current surah
+}
 
 class AudioPlayerService extends ChangeNotifier {
   final AudioPlayer _quranPlayer = AudioPlayer();
@@ -21,8 +28,12 @@ class AudioPlayerService extends ChangeNotifier {
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
   bool _autoPlayNext = true;
+  bool _isShuffle = false;
+  QuranLoopMode _loopMode = QuranLoopMode.all;
   bool _isChangingTrack = false;
   Timer? _positionTimer;
+  Timer? _sleepTimer;
+  int _sleepTimerMinutes = 0;
 
   List<Surah> get surahList => _surahList;
   Surah? get currentSurah => _currentSurah;
@@ -35,6 +46,9 @@ class AudioPlayerService extends ChangeNotifier {
   bool get isChangingTrack => _isChangingTrack;
   bool get isSeekable => _duration.inSeconds > 0;
   bool get autoPlayNext => _autoPlayNext;
+  bool get isShuffle => _isShuffle;
+  QuranLoopMode get loopMode => _loopMode;
+  int get sleepTimerMinutes => _sleepTimerMinutes;
 
   AudioPlayer get quranPlayer => _quranPlayer;
 
@@ -51,6 +65,41 @@ class AudioPlayerService extends ChangeNotifier {
   void toggleAutoPlayNext() {
     _autoPlayNext = !_autoPlayNext;
     notifyListeners();
+  }
+
+  void toggleShuffle() {
+    _isShuffle = !_isShuffle;
+    notifyListeners();
+  }
+
+  void toggleLoopMode() {
+    switch (_loopMode) {
+      case QuranLoopMode.all:
+        _loopMode = QuranLoopMode.one;
+        break;
+      case QuranLoopMode.one:
+        _loopMode = QuranLoopMode.off;
+        break;
+      case QuranLoopMode.off:
+        _loopMode = QuranLoopMode.all;
+        break;
+    }
+    notifyListeners();
+  }
+
+  void setSleepTimer(int minutes) {
+    _sleepTimer?.cancel();
+    _sleepTimerMinutes = minutes;
+    notifyListeners();
+
+    if (minutes > 0) {
+      _sleepTimer = Timer(Duration(minutes: minutes), () {
+        pause();
+        stopAllBacksounds();
+        _sleepTimerMinutes = 0;
+        notifyListeners();
+      });
+    }
   }
 
   Future<void> initialize() async {
@@ -96,7 +145,12 @@ class AudioPlayerService extends ChangeNotifier {
       notifyListeners();
 
       if (state.processingState == ProcessingState.completed) {
-        if (_autoPlayNext && !_isChangingTrack) {
+        if (_isChangingTrack) return;
+
+        if (_loopMode == QuranLoopMode.one) {
+          // Replay current surah
+          seek(Duration.zero).then((_) => resume());
+        } else if (_loopMode == QuranLoopMode.all || _autoPlayNext) {
           playNext();
         }
       }
@@ -153,6 +207,16 @@ class AudioPlayerService extends ChangeNotifier {
   Future<void> playNext() async {
     if (_currentSurah == null || _isChangingTrack) return;
     final qari = _currentQari ?? Qari.defaultQaris.first;
+
+    if (_isShuffle && _surahList.isNotEmpty && _surahList.length > 1) {
+      final random = Random();
+      int randomIndex;
+      do {
+        randomIndex = random.nextInt(_surahList.length);
+      } while (_surahList[randomIndex].number == _currentSurah!.number);
+      await play(qari, _surahList[randomIndex]);
+      return;
+    }
 
     if (_surahList.isNotEmpty) {
       final currentIndex = _surahList.indexWhere((s) => s.number == _currentSurah!.number);
@@ -362,6 +426,7 @@ class AudioPlayerService extends ChangeNotifier {
   @override
   void dispose() {
     _positionTimer?.cancel();
+    _sleepTimer?.cancel();
     _quranPlayer.dispose();
     for (final player in _backsounds.values) {
       player.dispose();

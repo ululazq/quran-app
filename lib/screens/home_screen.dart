@@ -838,27 +838,11 @@ class _SettingsView extends StatefulWidget {
 class _SettingsViewState extends State<_SettingsView> {
   bool _backgroundPlayEnabled = true;
   String _selectedQuality = 'Standar (128 kbps)';
-  int _sleepTimerMinutes = 0;
-  Timer? _activeSleepTimer;
 
   void _setSleepTimer(int minutes) {
-    _activeSleepTimer?.cancel();
-    setState(() => _sleepTimerMinutes = minutes);
-
+    final player = context.read<AudioPlayerService>();
+    player.setSleepTimer(minutes);
     if (minutes > 0) {
-      final player = context.read<AudioPlayerService>();
-      _activeSleepTimer = Timer(Duration(minutes: minutes), () {
-        player.pause();
-        if (mounted) {
-          setState(() => _sleepTimerMinutes = 0);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Sleep Timer: Audio telah berhenti otomatis.'),
-              backgroundColor: AppTheme.primaryEmerald,
-            ),
-          );
-        }
-      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Sleep Timer aktif: Audio akan berhenti dalam $minutes menit.'),
@@ -914,6 +898,9 @@ class _SettingsViewState extends State<_SettingsView> {
   }
 
   void _showSleepTimerDialog() {
+    final player = context.read<AudioPlayerService>();
+    final currentMins = player.sleepTimerMinutes;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -935,10 +922,11 @@ class _SettingsViewState extends State<_SettingsView> {
             45,
             60,
           ].map((mins) {
+            final isSelected = currentMins == mins;
             return ListTile(
               leading: Icon(
-                _sleepTimerMinutes == mins ? Icons.radio_button_checked : Icons.radio_button_off,
-                color: _sleepTimerMinutes == mins ? AppTheme.primaryEmerald : Colors.grey,
+                isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: isSelected ? AppTheme.primaryEmerald : Colors.grey,
               ),
               title: Text(
                 mins == 0 ? 'Matikan Timer' : '$mins Menit',
@@ -1010,12 +998,13 @@ class _SettingsViewState extends State<_SettingsView> {
 
   @override
   void dispose() {
-    _activeSleepTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final sleepMins = context.watch<AudioPlayerService>().sleepTimerMinutes;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -1086,7 +1075,7 @@ class _SettingsViewState extends State<_SettingsView> {
         _buildActionTile(
           icon: Icons.timer_outlined,
           title: 'Sleep Timer (Mati Otomatis)',
-          subtitle: _sleepTimerMinutes > 0 ? 'Aktif: $_sleepTimerMinutes menit' : 'Tidak aktif',
+          subtitle: sleepMins > 0 ? 'Aktif: $sleepMins menit' : 'Tidak aktif',
           trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.textTertiary),
           onTap: _showSleepTimerDialog,
         ),
