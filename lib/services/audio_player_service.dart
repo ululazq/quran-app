@@ -35,6 +35,9 @@ class AudioPlayerService extends ChangeNotifier {
   Timer? _sleepTimer;
   int _sleepTimerMinutes = 0;
 
+  List<AudioSource>? _playlistSources;
+  String? _playlistQariId;
+
   List<Surah> get surahList => _surahList;
   Surah? get currentSurah => _currentSurah;
   Qari? get currentQari => _currentQari;
@@ -54,6 +57,8 @@ class AudioPlayerService extends ChangeNotifier {
 
   void setSurahList(List<Surah> list) {
     _surahList = list;
+    _playlistSources = null;
+    _playlistQariId = null;
     notifyListeners();
   }
 
@@ -148,10 +153,22 @@ class AudioPlayerService extends ChangeNotifier {
         if (_isChangingTrack) return;
 
         if (_loopMode == QuranLoopMode.one) {
-          // Replay current surah
           seek(Duration.zero).then((_) => resume());
         } else if (_loopMode == QuranLoopMode.all || _autoPlayNext) {
           playNext();
+        }
+      }
+    });
+
+    _quranPlayer.currentIndexStream.listen((index) {
+      if (index != null && _surahList.isNotEmpty && index >= 0 && index < _surahList.length) {
+        final newSurah = _surahList[index];
+        if (_currentSurah?.number != newSurah.number) {
+          _currentSurah = newSurah;
+          if (_currentQari != null) {
+            _currentUrl = _buildAudioUrl(_currentQari!, newSurah.number);
+          }
+          notifyListeners();
         }
       }
     });
@@ -169,6 +186,36 @@ class AudioPlayerService extends ChangeNotifier {
     });
   }
 
+  List<Surah> get _effectiveSurahList {
+    if (_surahList.isNotEmpty) return _surahList;
+    return List.generate(
+      114,
+      (i) => Surah(
+        number: i + 1,
+        name: 'Surah ${i + 1}',
+        nameArabic: '',
+        verses: 0,
+        revelationType: 'Makkiyah',
+      ),
+    );
+  }
+
+  List<AudioSource> _createAudioSources(Qari qari) {
+    return _effectiveSurahList.map((s) {
+      final audioUrl = _buildAudioUrl(qari, s.number);
+      return AudioSource.uri(
+        Uri.parse(audioUrl),
+        tag: MediaItem(
+          id: '${s.number}',
+          album: qari.name,
+          title: s.name,
+          displaySubtitle: s.nameArabic,
+          displayDescription: '${s.revelationType} • ${s.verses} Ayat',
+        ),
+      );
+    }).toList();
+  }
+
   Future<void> play(Qari qari, Surah surah) async {
     if (_isChangingTrack) return;
     _isChangingTrack = true;
@@ -181,18 +228,27 @@ class AudioPlayerService extends ChangeNotifier {
     _currentUrl = url;
     debugPrint('Playing audio URL: $url');
 
+    final list = _effectiveSurahList;
+    int targetIndex = list.indexWhere((s) => s.number == surah.number);
+    if (targetIndex < 0) targetIndex = (surah.number - 1).clamp(0, list.length - 1);
+
     try {
-      await _quranPlayer.setAudioSource(
-        AudioSource.uri(
-          Uri.parse(url),
-          tag: MediaItem(
-            id: '${surah.number}',
-            album: qari.name,
-            title: surah.name,
-            displaySubtitle: surah.nameArabic,
-          ),
-        ),
-      );
+      if (_playlistQariId != qari.id || _playlistSources == null) {
+        final sources = _createAudioSources(qari);
+        _playlistSources = sources;
+        _playlistQariId = qari.id;
+        await _quranPlayer.setAudioSources(
+          sources,
+          initialIndex: targetIndex,
+          initialPosition: Duration.zero,
+        );
+      } else {
+        if (_quranPlayer.currentIndex != targetIndex) {
+          await _quranPlayer.seek(Duration.zero, index: targetIndex);
+        } else {
+          await _quranPlayer.seek(Duration.zero);
+        }
+      }
       await _quranPlayer.play();
       _startPositionTimer();
     } catch (e) {
@@ -207,88 +263,60 @@ class AudioPlayerService extends ChangeNotifier {
   Future<void> playNext() async {
     if (_currentSurah == null || _isChangingTrack) return;
     final qari = _currentQari ?? Qari.defaultQaris.first;
+    final list = _effectiveSurahList;
 
-    if (_isShuffle && _surahList.isNotEmpty && _surahList.length > 1) {
+    if (_isShuffle && list.length > 1) {
       final random = Random();
       int randomIndex;
       do {
-        randomIndex = random.nextInt(_surahList.length);
-      } while (_surahList[randomIndex].number == _currentSurah!.number);
-      await play(qari, _surahList[randomIndex]);
+        randomIndex = random.nextInt(list.length);
+      } while (list[randomIndex].number == _currentSurah!.number);
+      await play(qari, list[randomIndex]);
       return;
     }
 
-    if (_surahList.isNotEmpty) {
-      final currentIndex = _surahList.indexWhere((s) => s.number == _currentSurah!.number);
-      if (currentIndex >= 0 && currentIndex < _surahList.length - 1) {
-        final nextSurah = _surahList[currentIndex + 1];
-        await play(qari, nextSurah);
+    if (_quranPlayer.hasNext) {
+      try {
+        await _quranPlayer.seekToNext();
+        await _quranPlayer.play();
         return;
-      } else if (currentIndex == _surahList.length - 1) {
-        final nextSurah = _surahList.first;
-        await play(qari, nextSurah);
-        return;
-      }
+      } catch (_) {}
     }
 
-    if (_currentSurah!.number < 114) {
-      final nextNumber = _currentSurah!.number + 1;
-      final fallbackSurah = Surah(
-        number: nextNumber,
-        name: 'Surah $nextNumber',
-        nameArabic: '',
-        verses: 0,
-        revelationType: 'Makkiyah',
-      );
-      await play(qari, fallbackSurah);
-    } else {
-      const fallbackSurah = Surah(
-        number: 1,
-        name: 'Al-Fatihah',
-        nameArabic: 'الفاتحة',
-        verses: 7,
-        revelationType: 'Makkiyah',
-      );
-      await play(qari, fallbackSurah);
+    if (list.isNotEmpty) {
+      final currentIndex = list.indexWhere((s) => s.number == _currentSurah!.number);
+      if (currentIndex >= 0 && currentIndex < list.length - 1) {
+        await play(qari, list[currentIndex + 1]);
+        return;
+      } else {
+        await play(qari, list.first);
+        return;
+      }
     }
   }
 
   Future<void> playPrevious() async {
     if (_currentSurah == null || _isChangingTrack) return;
     final qari = _currentQari ?? Qari.defaultQaris.first;
+    final list = _effectiveSurahList;
 
-    if (_surahList.isNotEmpty) {
-      final currentIndex = _surahList.indexWhere((s) => s.number == _currentSurah!.number);
-      if (currentIndex > 0) {
-        final prevSurah = _surahList[currentIndex - 1];
-        await play(qari, prevSurah);
+    if (_quranPlayer.hasPrevious) {
+      try {
+        await _quranPlayer.seekToPrevious();
+        await _quranPlayer.play();
         return;
-      } else if (currentIndex == 0) {
-        final prevSurah = _surahList.last;
-        await play(qari, prevSurah);
-        return;
-      }
+      } catch (_) {}
     }
 
-    if (_currentSurah!.number > 1) {
-      final prevNumber = _currentSurah!.number - 1;
-      final fallbackSurah = Surah(
-        number: prevNumber,
-        name: 'Surah $prevNumber',
-        nameArabic: '',
-        verses: 0,
-        revelationType: 'Makkiyah',
-      );
-      await play(qari, fallbackSurah);
-    } else {
-      const fallbackSurah = Surah(
-        number: 114,
-        name: 'An-Nas',
-        nameArabic: 'الناس',
-        verses: 6,
-        revelationType: 'Makkiyah',
-      );
-      await play(qari, fallbackSurah);
+    if (list.isNotEmpty) {
+      final currentIndex = list.indexWhere((s) => s.number == _currentSurah!.number);
+      if (currentIndex > 0) {
+        await play(qari, list[currentIndex - 1]);
+        return;
+      } else {
+        await play(qari, list.last);
+        return;
+      }
     }
   }
 

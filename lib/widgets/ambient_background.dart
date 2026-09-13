@@ -1,8 +1,9 @@
 ﻿import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 
 /// Dynamic looping ambient scene visualizer that changes based on the selected backsound.
-/// Generates hardware-accelerated 60 FPS weather and nature animations (Rain, Ocean, Birds/Forest, Night Stars/Fireflies, Wind, Fireplace Embers, and Quran Aura).
+/// Supports real aesthetic looping video backgrounds with hardware-accelerated 60 FPS canvas fallback.
 class AmbientBackground extends StatefulWidget {
   final String? activeBacksoundId;
   final bool isPlaying;
@@ -19,20 +20,83 @@ class AmbientBackground extends StatefulWidget {
 
 class _AmbientBackgroundState extends State<AmbientBackground>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+  late AnimationController _animController;
+  VideoPlayerController? _videoController;
+  String? _currentLoadedVideoId;
+  bool _isVideoInitialized = false;
+
+  static const Map<String, String> _videoMap = {
+    'rain': 'https://assets.mixkit.co/videos/preview/mixkit-rain-falling-on-the-water-of-a-lake-1941-large.mp4',
+    'ocean': 'https://assets.mixkit.co/videos/preview/mixkit-waves-coming-to-the-beach-5016-large.mp4',
+    'birds': 'https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-sunlight-529-large.mp4',
+    'night': 'https://assets.mixkit.co/videos/preview/mixkit-stars-in-the-night-sky-slow-motion-41865-large.mp4',
+    'wind': 'https://assets.mixkit.co/videos/preview/mixkit-wind-blowing-in-a-wheat-field-41584-large.mp4',
+    'fireplace': 'https://assets.mixkit.co/videos/preview/mixkit-fireplace-with-burning-logs-41508-large.mp4',
+  };
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 6000),
     )..repeat();
+
+    _updateVideoPlayer(widget.activeBacksoundId);
+  }
+
+  @override
+  void didUpdateWidget(covariant AmbientBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.activeBacksoundId != widget.activeBacksoundId) {
+      _updateVideoPlayer(widget.activeBacksoundId);
+    }
+  }
+
+  Future<void> _updateVideoPlayer(String? backsoundId) async {
+    if (backsoundId == _currentLoadedVideoId && _videoController != null) return;
+
+    _currentLoadedVideoId = backsoundId;
+    final oldController = _videoController;
+    _videoController = null;
+    if (mounted) setState(() => _isVideoInitialized = false);
+
+    if (oldController != null) {
+      try {
+        await oldController.pause();
+        await oldController.dispose();
+      } catch (_) {}
+    }
+
+    if (backsoundId == null || !_videoMap.containsKey(backsoundId)) {
+      return;
+    }
+
+    final videoUrl = _videoMap[backsoundId]!;
+    try {
+      final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+      await controller.initialize();
+      await controller.setLooping(true);
+      await controller.setVolume(0.0); // Muted so audio player handles ambient sound
+      await controller.play();
+
+      if (mounted && _currentLoadedVideoId == backsoundId) {
+        setState(() {
+          _videoController = controller;
+          _isVideoInitialized = true;
+        });
+      } else {
+        await controller.dispose();
+      }
+    } catch (e) {
+      debugPrint('Error loading ambient video: $e');
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _animController.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
@@ -40,33 +104,57 @@ class _AmbientBackgroundState extends State<AmbientBackground>
   Widget build(BuildContext context) {
     return Positioned.fill(
       child: RepaintBoundary(
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return CustomPaint(
-              painter: _AmbientScenePainter(
-                progress: _controller.value,
-                backsoundId: widget.activeBacksoundId,
-                isPlaying: widget.isPlaying,
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  // Gradient overlay to keep text and lyrics perfectly readable
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      const Color(0xFF0F1117).withValues(alpha: 0.82),
-                      const Color(0xFF0F1117).withValues(alpha: 0.65),
-                      const Color(0xFF0F1117).withValues(alpha: 0.90),
-                      const Color(0xFF0F1117),
-                    ],
-                    stops: const [0.0, 0.35, 0.75, 1.0],
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Layer 1: Ambient Canvas Art Engine (Instant zero-delay fallback)
+            AnimatedBuilder(
+              animation: _animController,
+              builder: (context, child) {
+                return CustomPaint(
+                  painter: _AmbientScenePainter(
+                    progress: _animController.value,
+                    backsoundId: widget.activeBacksoundId,
+                    isPlaying: widget.isPlaying,
+                  ),
+                );
+              },
+            ),
+
+            // Layer 2: Real Aesthetic Looping Video Player
+            if (_videoController != null && _isVideoInitialized)
+              AnimatedOpacity(
+                opacity: _isVideoInitialized ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 600),
+                child: SizedBox.expand(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _videoController!.value.size.width,
+                      height: _videoController!.value.size.height,
+                      child: VideoPlayer(_videoController!),
+                    ),
                   ),
                 ),
               ),
-            );
-          },
+
+            // Layer 3: Atmospheric Scrim Gradient for 100% Arabic Text & Lyrics Legibility
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFF0F1117).withValues(alpha: 0.85),
+                    const Color(0xFF0F1117).withValues(alpha: 0.60),
+                    const Color(0xFF0F1117).withValues(alpha: 0.88),
+                    const Color(0xFF0F1117),
+                  ],
+                  stops: const [0.0, 0.35, 0.75, 1.0],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -111,9 +199,8 @@ class _AmbientScenePainter extends CustomPainter {
     }
   }
 
-  /// 1. Rain Scene: Falling rain streaks with depth, splashing ripple rings at bottom, soft thundercloud ambiance
+  /// 1. Rain Scene
   void _paintRainScene(Canvas canvas, Size size) {
-    // Ambient dark blue-slate gradient
     final bgPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
@@ -122,7 +209,6 @@ class _AmbientScenePainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
-    // Subtle cloud lightning pulse
     final lightningPulse = (sin(progress * 2 * pi * 0.5) > 0.96) ? 0.08 : 0.0;
     if (lightningPulse > 0) {
       final flashPaint = Paint()..color = Colors.cyanAccent.withValues(alpha: lightningPulse);
@@ -139,7 +225,6 @@ class _AmbientScenePainter extends CustomPainter {
       ..strokeWidth = 1.8
       ..strokeCap = StrokeCap.round;
 
-    // Layer 1: Background slow rain
     const dropCount = 45;
     for (int i = 0; i < dropCount; i++) {
       final seed = i * 79.19;
@@ -155,7 +240,6 @@ class _AmbientScenePainter extends CustomPainter {
       );
     }
 
-    // Layer 2: Foreground fast rain
     const fgDropCount = 30;
     for (int i = 0; i < fgDropCount; i++) {
       final seed = i * 137.5;
@@ -171,7 +255,6 @@ class _AmbientScenePainter extends CustomPainter {
       );
     }
 
-    // Layer 3: Water ripple rings at bottom
     final ripplePaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
@@ -192,9 +275,8 @@ class _AmbientScenePainter extends CustomPainter {
     }
   }
 
-  /// 2. Ocean Scene: Dynamic sine waves, glowing foam lines, moonlight shimmer
+  /// 2. Ocean Scene
   void _paintOceanScene(Canvas canvas, Size size) {
-    // Deep ocean gradient
     final bgPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
@@ -215,14 +297,10 @@ class _AmbientScenePainter extends CustomPainter {
       ..color = const Color(0xFF38BDF8).withValues(alpha: 0.18)
       ..style = PaintingStyle.fill;
 
-    // Draw wave layer 1
     _drawSineWave(canvas, size, wavePaint1, heightOffset: size.height * 0.68, amplitude: 22, freq: 1.2, speedOffset: progress * 2 * pi);
-    // Draw wave layer 2
     _drawSineWave(canvas, size, wavePaint2, heightOffset: size.height * 0.76, amplitude: 16, freq: 1.8, speedOffset: -progress * 2 * pi * 1.3);
-    // Draw wave layer 3
     _drawSineWave(canvas, size, wavePaint3, heightOffset: size.height * 0.84, amplitude: 12, freq: 2.4, speedOffset: progress * 2 * pi * 0.8);
 
-    // Floating water sparkles
     final sparklePaint = Paint()..style = PaintingStyle.fill;
     for (int i = 0; i < 20; i++) {
       final sx = (sin(i * 91.3) * 0.5 + 0.5) * size.width;
@@ -253,9 +331,8 @@ class _AmbientScenePainter extends CustomPainter {
     canvas.drawPath(path, paint);
   }
 
-  /// 3. Forest & Birds Scene: Lush canopy light-rays, floating foliage & sunlit pollen
+  /// 3. Forest & Birds Scene
   void _paintForestScene(Canvas canvas, Size size) {
-    // Forest canopy gradient
     final bgPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
@@ -264,7 +341,6 @@ class _AmbientScenePainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
-    // Diagonal sun rays (God rays)
     final rayPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
@@ -284,7 +360,6 @@ class _AmbientScenePainter extends CustomPainter {
       ..close();
     canvas.drawPath(rayPath, rayPaint);
 
-    // Floating leaves & pollen
     final leafPaint = Paint()..style = PaintingStyle.fill;
     for (int i = 0; i < 28; i++) {
       final seed = i * 67.3;
@@ -304,9 +379,8 @@ class _AmbientScenePainter extends CustomPainter {
     }
   }
 
-  /// 4. Night Scene: Deep indigo sky, twinkling stars, shooting star, glowing fireflies
+  /// 4. Night Scene
   void _paintNightScene(Canvas canvas, Size size) {
-    // Night sky gradient
     final bgPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
@@ -316,8 +390,6 @@ class _AmbientScenePainter extends CustomPainter {
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
     final starPaint = Paint()..style = PaintingStyle.fill;
-
-    // Constellation twinkling stars
     for (int i = 0; i < 40; i++) {
       final sx = (sin(i * 123.45) * 0.5 + 0.5) * size.width;
       final sy = (cos(i * 87.65) * 0.5 + 0.5) * (size.height * 0.65);
@@ -329,7 +401,6 @@ class _AmbientScenePainter extends CustomPainter {
       canvas.drawCircle(Offset(sx, sy), radius, starPaint);
     }
 
-    // Shooting star (periodic)
     final meteorCycle = (progress * 3) % 1.0;
     if (meteorCycle < 0.25) {
       final mProg = meteorCycle / 0.25;
@@ -351,26 +422,22 @@ class _AmbientScenePainter extends CustomPainter {
       canvas.drawLine(Offset(curX, curY), Offset(curX + 35, curY - 18), meteorPaint);
     }
 
-    // Glowing drifting fireflies
     final fireflyPaint = Paint()..style = PaintingStyle.fill;
     for (int i = 0; i < 16; i++) {
       final fx = (sin(i * 73.1 + progress * pi) * 0.4 + 0.5) * size.width;
       final fy = size.height * 0.45 + (cos(i * 37.9 - progress * 1.5 * pi) * 0.35 + 0.35) * size.height * 0.45;
       final glow = (sin(progress * 6 * pi + i * 3) + 1) / 2;
 
-      // Outer glow
       fireflyPaint.color = const Color(0xFFFDE047).withValues(alpha: glow * 0.25);
       canvas.drawCircle(Offset(fx, fy), 8 * glow + 2, fireflyPaint);
 
-      // Core
       fireflyPaint.color = const Color(0xFFFEF08A).withValues(alpha: 0.6 + glow * 0.4);
       canvas.drawCircle(Offset(fx, fy), 2.2, fireflyPaint);
     }
   }
 
-  /// 5. Wind Scene: Aerodynamic breeze ribbons & swirling particles
+  /// 5. Wind Scene
   void _paintWindScene(Canvas canvas, Size size) {
-    // Breeze gradient
     final bgPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
@@ -406,9 +473,8 @@ class _AmbientScenePainter extends CustomPainter {
     }
   }
 
-  /// 6. Fireplace Scene: Warm amber glow, floating campfire embers drifting upwards
+  /// 6. Fireplace Scene
   void _paintFireplaceScene(Canvas canvas, Size size) {
-    // Fireplace warm ember gradient
     final bgPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
@@ -417,7 +483,6 @@ class _AmbientScenePainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
-    // Warm radial fire pulse from bottom center
     final firePulse = (sin(progress * 8 * pi) + cos(progress * 14 * pi) + 2) / 4;
     final radialPaint = Paint()
       ..shader = RadialGradient(
@@ -431,7 +496,6 @@ class _AmbientScenePainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), radialPaint);
 
-    // Rising glowing embers
     final emberPaint = Paint()..style = PaintingStyle.fill;
     for (int i = 0; i < 35; i++) {
       final seed = i * 43.7;
@@ -448,7 +512,7 @@ class _AmbientScenePainter extends CustomPainter {
     }
   }
 
-  /// 7. Default Quran Emerald Aura: Rotating sacred mandala aura with stardust
+  /// 7. Default Quran Emerald Aura
   void _paintDefaultQuranAura(Canvas canvas, Size size) {
     final bgPaint = Paint()
       ..shader = const LinearGradient(
@@ -460,7 +524,6 @@ class _AmbientScenePainter extends CustomPainter {
 
     final center = Offset(size.width * 0.5, size.height * 0.32);
 
-    // Slow rotating emerald aura
     final auraPaint = Paint()
       ..shader = RadialGradient(
         center: Alignment.center,
@@ -473,7 +536,6 @@ class _AmbientScenePainter extends CustomPainter {
       ).createShader(Rect.fromCircle(center: center, radius: size.width * 0.55));
     canvas.drawCircle(center, size.width * 0.55, auraPaint);
 
-    // Gold floating particles
     final particlePaint = Paint()..style = PaintingStyle.fill;
     for (int i = 0; i < 24; i++) {
       final angle = (i / 24) * 2 * pi + (progress * 2 * pi * 0.2);

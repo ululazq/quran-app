@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _loadData();
   }
 
@@ -86,9 +86,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           child: TabBarView(
             controller: _tabController,
             children: const [
-              _SurahListView(),
               _QariListView(),
-              _BacksoundView(),
+              _SurahListView(),
             ],
           ),
         ),
@@ -188,17 +187,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.menu_book_rounded, size: 16),
-                SizedBox(width: 6),
-                Text('Surah'),
-              ],
-            ),
-          ),
-          Tab(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.person_rounded, size: 16),
+                Icon(Icons.record_voice_over_rounded, size: 16),
                 SizedBox(width: 6),
                 Text('Qari'),
               ],
@@ -208,9 +197,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.spa_rounded, size: 16),
+                Icon(Icons.menu_book_rounded, size: 16),
                 SizedBox(width: 6),
-                Text('Suara Alam'),
+                Text('Surah'),
               ],
             ),
           ),
@@ -550,79 +539,6 @@ class _QariListViewState extends State<_QariListView> {
           ],
         );
       },
-    );
-  }
-}
-
-class _BacksoundView extends StatelessWidget {
-  const _BacksoundView();
-
-  @override
-  Widget build(BuildContext context) {
-    final backsounds = Backsound.presets;
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Intro Banner
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: AppTheme.heroGradient,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.primaryEmerald.withValues(alpha: 0.3), width: 1),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.spa_rounded, color: AppTheme.primaryEmeraldLight, size: 28),
-              SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Suara Alam Relaksasi',
-                      style: TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Dengarkan tilawah berpadu suara hujan, ombak, angin, atau burung untuk ketenangan hati.',
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.4),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.15,
-          ),
-          itemCount: backsounds.length,
-          itemBuilder: (context, index) {
-            final backsound = backsounds[index];
-            return BacksoundCard(
-              backsound: backsound,
-              onTap: () {
-                final player = context.read<AudioPlayerService>();
-                player.toggleBacksound(backsound);
-              },
-            );
-          },
-        ),
-      ],
     );
   }
 }
