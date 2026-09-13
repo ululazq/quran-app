@@ -7,17 +7,17 @@ import '../models/surah_model.dart';
 class QuranApiService extends ChangeNotifier {
   static const _quranCloudBase = 'https://api.alquran.cloud/v1';
 
-  List<Qari> _qaris = [];
+  List<Qari> _qaris = List.from(Qari.defaultQaris);
   List<Surah> _surahs = [];
   Surah? _currentSurah;
-  Qari? _currentQari;
+  Qari? _currentQari = Qari.defaultQaris.first;
   bool _isLoading = false;
   String? _error;
 
   List<Qari> get qaris => _qaris;
   List<Surah> get surahs => _surahs;
   Surah? get currentSurah => _currentSurah;
-  Qari? get currentQari => _currentQari;
+  Qari? get currentQari => _currentQari ?? (_qaris.isNotEmpty ? _qaris.first : Qari.defaultQaris.first);
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -27,23 +27,35 @@ class QuranApiService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Mengambil daftar Qari dari MP3Quran
       final response = await http.get(
-        Uri.parse('https://mp3quran.net/api/v3/reciters?language=ar'),
-      );
+        Uri.parse('https://mp3quran.net/api/v3/reciters?language=eng'),
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final list = data['reciters'] as List? ?? [];
-        _qaris = list.map((e) => Qari.fromJson(e as Map<String, dynamic>)).toList();
-        
-        // Qari populer di awal
-        _qaris.sort((a, b) => a.name.compareTo(b.name));
+        final parsedQaris = list
+            .map((e) => Qari.fromJson(e as Map<String, dynamic>))
+            .where((q) => q.server.isNotEmpty)
+            .toList();
+
+        if (parsedQaris.isNotEmpty) {
+          _qaris = parsedQaris;
+          _qaris.sort((a, b) => a.name.compareTo(b.name));
+          if (_currentQari == null || !_qaris.contains(_currentQari)) {
+            _currentQari = _qaris.first;
+          }
+        }
       } else {
-        _error = 'Gagal memuat daftar Qari';
+        if (_qaris.isEmpty) {
+          _qaris = List.from(Qari.defaultQaris);
+        }
       }
     } catch (e) {
-      _error = 'Error: $e';
+      debugPrint('Error loading qaris from API, using default list: $e');
+      if (_qaris.isEmpty) {
+        _qaris = List.from(Qari.defaultQaris);
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -58,7 +70,7 @@ class QuranApiService extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse('$_quranCloudBase/surah'),
-      );
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -68,7 +80,7 @@ class QuranApiService extends ChangeNotifier {
         _error = 'Gagal memuat daftar Surah';
       }
     } catch (e) {
-      _error = 'Error: $e';
+      _error = 'Koneksi bermasalah: $e';
     } finally {
       _isLoading = false;
       notifyListeners();

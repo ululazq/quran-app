@@ -198,17 +198,14 @@ class _SurahListView extends StatelessWidget {
               isSelected: isSelected,
               onTap: () {
                 api.selectSurah(surah);
-                if (player.currentQari != null) {
-                  player.play(player.currentQari!, surah);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PlayerScreen()),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Pilih Qari terlebih dahulu')),
-                  );
+                final qari = player.currentQari ?? api.currentQari ?? (api.qaris.isNotEmpty ? api.qaris.first : null);
+                if (qari != null) {
+                  player.play(qari, surah);
                 }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PlayerScreen()),
+                );
               },
             );
           },
@@ -223,8 +220,8 @@ class _QariListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<QuranApiService>(
-      builder: (context, api, _) {
+    return Consumer2<QuranApiService, AudioPlayerService>(
+      builder: (context, api, player, _) {
         if (api.isLoading) {
           return const Center(child: CircularProgressIndicator(color: Color(0xFF1DB954)));
         }
@@ -234,6 +231,8 @@ class _QariListView extends StatelessWidget {
             child: Text('Belum ada data Qari', style: TextStyle(color: Colors.white70)),
           );
         }
+
+        final activeQari = player.currentQari ?? api.currentQari;
 
         return GridView.builder(
           padding: const EdgeInsets.all(16),
@@ -246,15 +245,20 @@ class _QariListView extends StatelessWidget {
           itemCount: api.qaris.length,
           itemBuilder: (context, index) {
             final qari = api.qaris[index];
+            final isSelected = activeQari?.id == qari.id || activeQari?.name == qari.name;
             return QariCard(
               qari: qari,
-              isSelected: api.currentQari?.id == qari.id,
+              isSelected: isSelected,
               onTap: () {
                 api.selectQari(qari);
+                if (player.currentSurah != null) {
+                  player.play(qari, player.currentSurah!);
+                }
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Qari dipilih: ${qari.name}'),
                     backgroundColor: const Color(0xFF1DB954),
+                    duration: const Duration(seconds: 1),
                   ),
                 );
               },

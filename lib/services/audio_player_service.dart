@@ -32,14 +32,18 @@ class AudioPlayerService extends ChangeNotifier {
   AudioPlayer get quranPlayer => _quranPlayer;
 
   Future<void> initialize() async {
-    await JustAudioBackground.init(
-      androidNotificationChannelId: 'com.quran.app.channel.audio',
-      androidNotificationChannelName: 'Quran Playback',
-      androidNotificationOngoing: true,
-      androidShowNotificationBadge: true,
-      androidNotificationIcon: 'mipmap/ic_launcher',
-      androidNotificationClickStartsActivity: true,
-    );
+    try {
+      await JustAudioBackground.init(
+        androidNotificationChannelId: 'com.quran.app.channel.audio',
+        androidNotificationChannelName: 'Quran Playback',
+        androidNotificationOngoing: true,
+        androidShowNotificationBadge: true,
+        androidNotificationIcon: 'mipmap/ic_launcher',
+        androidNotificationClickStartsActivity: true,
+      );
+    } catch (e) {
+      debugPrint('Warning initializing background audio service: $e');
+    }
 
     _quranPlayer.playerStateStream.listen((state) {
       _playerState = state;
@@ -69,8 +73,10 @@ class AudioPlayerService extends ChangeNotifier {
     _currentSurah = surah;
     final url = _buildAudioUrl(qari, surah.number);
     _currentUrl = url;
+    debugPrint('Playing audio URL: $url');
 
     try {
+      await _quranPlayer.stop();
       await _quranPlayer.setAudioSource(
         AudioSource.uri(
           Uri.parse(url),
@@ -191,9 +197,10 @@ class AudioPlayerService extends ChangeNotifier {
   String _buildAudioUrl(Qari qari, int surahNumber) {
     final padded = surahNumber.toString().padLeft(3, '0');
     if (qari.server.isNotEmpty) {
-      return '${qari.server}$padded.mp3';
+      final base = qari.server.endsWith('/') ? qari.server : '${qari.server}/';
+      return '$base$padded.mp3';
     }
-    return 'https://server11.mp3quran.net/afs/$padded.mp3';
+    return 'https://server8.mp3quran.net/afs/$padded.mp3';
   }
 
   @override

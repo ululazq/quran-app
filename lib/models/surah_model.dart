@@ -17,11 +17,11 @@ class Surah extends Equatable {
 
   factory Surah.fromJson(Map<String, dynamic> json) {
     return Surah(
-      number: json['number'] ?? json['no'] ?? 0,
-      name: json['name'] ?? '',
-      nameArabic: json['nameArabic'] ?? json['name_arabic'] ?? '',
-      verses: json['verses'] ?? json['num_of_aya'] ?? 0,
-      revelationType: json['revelationType'] ?? json['revelation_type'] ?? '',
+      number: (json['number'] ?? json['no'] ?? 0) as int,
+      name: (json['englishName'] ?? json['name'] ?? 'Surah').toString(),
+      nameArabic: (json['name'] ?? json['nameArabic'] ?? json['name_arabic'] ?? '').toString(),
+      verses: (json['numberOfAyahs'] ?? json['verses'] ?? json['num_of_aya'] ?? 0) as int,
+      revelationType: (json['revelationType'] ?? json['revelation_type'] ?? 'Meccan').toString(),
     );
   }
 
