@@ -879,7 +879,7 @@ class _SettingsViewState extends State<_SettingsView> {
           children: [
             Icon(Icons.auto_stories_rounded, color: AppTheme.primaryEmerald),
             SizedBox(width: 10),
-            Text('Tentang Quran App', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Tentang Quranizer', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
         content: const Column(
@@ -956,7 +956,7 @@ class _SettingsViewState extends State<_SettingsView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Quran App Pro Max',
+                    'Quranizer Pro Max',
                     style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 2),

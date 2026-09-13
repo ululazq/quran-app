@@ -162,14 +162,29 @@ class MiniPlayer extends StatelessWidget {
                           ),
                         ),
 
-                        // Action Controls Deck: [Prev, Play/Pause, Next, Close]
+                        // Full 5-Button Action Controls Deck: [Shuffle, Prev, Play/Pause, Next, Loop]
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // 1. Previous Surah
+                            // 1. Shuffle / Randomize
                             IconButton(
                               visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.all(4),
+                              padding: const EdgeInsets.all(3),
+                              constraints: const BoxConstraints(),
+                              icon: Icon(
+                                Icons.shuffle_rounded,
+                                color: player.isShuffle ? AppTheme.primaryEmerald : AppTheme.textTertiary,
+                                size: 20,
+                              ),
+                              tooltip: player.isShuffle ? 'Acak: Aktif' : 'Acak: Nonaktif',
+                              onPressed: () => player.toggleShuffle(),
+                            ),
+                            const SizedBox(width: 2),
+
+                            // 2. Previous Surah
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.all(3),
                               constraints: const BoxConstraints(),
                               icon: const Icon(
                                 Icons.skip_previous_rounded,
@@ -179,12 +194,12 @@ class MiniPlayer extends StatelessWidget {
                               tooltip: 'Surah Sebelumnya',
                               onPressed: () => player.playPrevious(),
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 2),
 
-                            // 2. Play / Pause
+                            // 3. Play / Pause
                             IconButton(
                               visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.all(2),
+                              padding: const EdgeInsets.all(1),
                               constraints: const BoxConstraints(),
                               icon: Icon(
                                 player.isPlaying
@@ -201,12 +216,12 @@ class MiniPlayer extends StatelessWidget {
                                 }
                               },
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 2),
 
-                            // 3. Next Surah
+                            // 4. Next Surah
                             IconButton(
                               visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.all(4),
+                              padding: const EdgeInsets.all(3),
                               constraints: const BoxConstraints(),
                               icon: const Icon(
                                 Icons.skip_next_rounded,
@@ -216,20 +231,28 @@ class MiniPlayer extends StatelessWidget {
                               tooltip: 'Surah Selanjutnya',
                               onPressed: () => player.playNext(),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 2),
 
-                            // 4. Close / Dismiss
+                            // 5. Loop / Repeat Mode
                             IconButton(
                               visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.all(4),
+                              padding: const EdgeInsets.all(3),
                               constraints: const BoxConstraints(),
-                              icon: const Icon(
-                                Icons.close_rounded,
-                                color: AppTheme.textTertiary,
-                                size: 18,
+                              icon: Icon(
+                                player.loopMode == QuranLoopMode.one
+                                    ? Icons.repeat_one_rounded
+                                    : Icons.repeat_rounded,
+                                color: player.loopMode != QuranLoopMode.off
+                                    ? AppTheme.primaryEmerald
+                                    : AppTheme.textTertiary,
+                                size: 20,
                               ),
-                              tooltip: 'Tutup',
-                              onPressed: () => player.stop(),
+                              tooltip: player.loopMode == QuranLoopMode.all
+                                  ? 'Ulang: Semua Surat'
+                                  : player.loopMode == QuranLoopMode.one
+                                      ? 'Ulang: 1 Surat'
+                                      : 'Ulang: Nonaktif',
+                              onPressed: () => player.toggleLoopMode(),
                             ),
                           ],
                         ),

@@ -25,7 +25,7 @@ class QuranApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: playerService),
       ],
       child: MaterialApp(
-        title: 'Quran App',
+        title: 'Quranizer',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
         home: const HomeScreen(),
