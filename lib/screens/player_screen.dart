@@ -237,29 +237,72 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget _buildControls(AudioPlayerService player) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Column(
           children: [
-            IconButton(
-              icon: const Icon(Icons.replay_10, color: Colors.white70, size: 30),
-              onPressed: () => player.rewind(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.skip_previous_rounded, color: Colors.white, size: 36),
+                  tooltip: 'Surah Sebelumnya',
+                  onPressed: () => player.playPrevious(),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.replay_10, color: Colors.white70, size: 28),
+                  tooltip: 'Mundur 10 detik',
+                  onPressed: () => player.rewind(),
+                ),
+                Consumer<AudioPlayerService>(
+                  builder: (context, p, _) {
+                    return IconButton(
+                      icon: Icon(
+                        p.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                        color: const Color(0xFF1DB954),
+                        size: 68,
+                      ),
+                      onPressed: p.isPlaying ? () => p.pause() : () => p.resume(),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.forward_10, color: Colors.white70, size: 28),
+                  tooltip: 'Maju 10 detik',
+                  onPressed: () => player.fastForward(),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 36),
+                  tooltip: 'Surah Selanjutnya',
+                  onPressed: () => player.playNext(),
+                ),
+              ],
             ),
-            Consumer<AudioPlayerService>(
-              builder: (context, p, _) {
-                return IconButton(
-                  icon: Icon(
-                    p.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-                    color: const Color(0xFF1DB954),
-                    size: 68,
-                  ),
-                  onPressed: p.isPlaying ? () => p.pause() : () => p.resume(),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.forward_10, color: Colors.white70, size: 30),
-              onPressed: () => player.fastForward(),
+            const SizedBox(height: 4),
+            InkWell(
+              onTap: () => player.toggleAutoPlayNext(),
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      player.autoPlayNext ? Icons.autorenew : Icons.repeat_one,
+                      size: 16,
+                      color: player.autoPlayNext ? const Color(0xFF1DB954) : Colors.grey,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      player.autoPlayNext ? 'Auto-play Next: Aktif' : 'Auto-play Next: Nonaktif',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: player.autoPlayNext ? const Color(0xFF1DB954) : Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

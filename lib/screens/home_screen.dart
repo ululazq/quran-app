@@ -29,10 +29,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> _loadData() async {
     final apiService = context.read<QuranApiService>();
+    final playerService = context.read<AudioPlayerService>();
     await Future.wait([
       apiService.loadQaris(),
       apiService.loadSurahs(),
     ]);
+    if (mounted && apiService.surahs.isNotEmpty) {
+      playerService.setSurahList(apiService.surahs);
+    }
   }
 
   @override

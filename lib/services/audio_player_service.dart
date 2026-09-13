@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import '../models/qari_model.dart';
 import '../models/surah_model.dart';
@@ -11,6 +12,7 @@ class AudioPlayerService extends ChangeNotifier {
   final Map<String, AudioPlayer> _backsounds = {};
   final Map<String, double> _volumes = {};
 
+  List<Surah> _surahList = [];
   Surah? _currentSurah;
   Qari? _currentQari;
   String? _currentUrl;
@@ -18,8 +20,10 @@ class AudioPlayerService extends ChangeNotifier {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
+  bool _autoPlayNext = true;
   Timer? _positionTimer;
 
+  List<Surah> get surahList => _surahList;
   Surah? get currentSurah => _currentSurah;
   Qari? get currentQari => _currentQari;
   String? get currentUrl => _currentUrl;
@@ -28,10 +32,33 @@ class AudioPlayerService extends ChangeNotifier {
   Duration get duration => _duration;
   bool get isPlaying => _isPlaying;
   bool get isSeekable => _duration.inSeconds > 0;
+  bool get autoPlayNext => _autoPlayNext;
 
   AudioPlayer get quranPlayer => _quranPlayer;
 
+  void setSurahList(List<Surah> list) {
+    _surahList = list;
+    notifyListeners();
+  }
+
+  void setAutoPlayNext(bool value) {
+    _autoPlayNext = value;
+    notifyListeners();
+  }
+
+  void toggleAutoPlayNext() {
+    _autoPlayNext = !_autoPlayNext;
+    notifyListeners();
+  }
+
   Future<void> initialize() async {
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration.music());
+    } catch (e) {
+      debugPrint('Warning configuring audio session: $e');
+    }
+
     try {
       await JustAudioBackground.init(
         androidNotificationChannelId: 'com.quran.app.channel.audio',
@@ -51,7 +78,9 @@ class AudioPlayerService extends ChangeNotifier {
       notifyListeners();
 
       if (state.processingState == ProcessingState.completed) {
-        _stopAllBacksounds();
+        if (_autoPlayNext) {
+          playNext();
+        }
       }
     });
 
@@ -93,6 +122,66 @@ class AudioPlayerService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error playing audio: $e');
+    }
+  }
+
+  Future<void> playNext() async {
+    if (_currentSurah == null) return;
+    final qari = _currentQari ?? Qari.defaultQaris.first;
+
+    if (_surahList.isNotEmpty) {
+      final currentIndex = _surahList.indexWhere((s) => s.number == _currentSurah!.number);
+      if (currentIndex >= 0 && currentIndex < _surahList.length - 1) {
+        final nextSurah = _surahList[currentIndex + 1];
+        await play(qari, nextSurah);
+        return;
+      } else if (currentIndex == _surahList.length - 1) {
+        final nextSurah = _surahList.first;
+        await play(qari, nextSurah);
+        return;
+      }
+    }
+
+    if (_currentSurah!.number < 114) {
+      final nextNumber = _currentSurah!.number + 1;
+      final fallbackSurah = Surah(
+        number: nextNumber,
+        name: 'Surah $nextNumber',
+        nameArabic: '',
+        verses: 0,
+        revelationType: 'Makkiyah',
+      );
+      await play(qari, fallbackSurah);
+    }
+  }
+
+  Future<void> playPrevious() async {
+    if (_currentSurah == null) return;
+    final qari = _currentQari ?? Qari.defaultQaris.first;
+
+    if (_surahList.isNotEmpty) {
+      final currentIndex = _surahList.indexWhere((s) => s.number == _currentSurah!.number);
+      if (currentIndex > 0) {
+        final prevSurah = _surahList[currentIndex - 1];
+        await play(qari, prevSurah);
+        return;
+      } else if (currentIndex == 0) {
+        final prevSurah = _surahList.last;
+        await play(qari, prevSurah);
+        return;
+      }
+    }
+
+    if (_currentSurah!.number > 1) {
+      final prevNumber = _currentSurah!.number - 1;
+      final fallbackSurah = Surah(
+        number: prevNumber,
+        name: 'Surah $prevNumber',
+        nameArabic: '',
+        verses: 0,
+        revelationType: 'Makkiyah',
+      );
+      await play(qari, fallbackSurah);
     }
   }
 
@@ -194,7 +283,7 @@ class AudioPlayerService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _stopAllBacksounds() {
+  void stopAllBacksounds() {
     for (final id in _activeBacksoundIds.toList()) {
       _backsounds[id]?.pause();
     }
