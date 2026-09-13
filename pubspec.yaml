@@ -32,3 +32,4 @@ flutter:
   
   assets:
     - assets/audio/backsounds/
+    - assets/videos/

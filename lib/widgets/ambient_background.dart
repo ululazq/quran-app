@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
-/// Dynamic looping ambient scene visualizer that changes based on the selected backsound.
-/// Supports real aesthetic looping video backgrounds with hardware-accelerated 60 FPS canvas fallback.
+/// Dynamic looping ambient scene visualizer from Quranify.
+/// Uses official high-definition offline asset video loops (Rain, Waves, Birds, Wind, Bonfire, and Quran Background).
 class AmbientBackground extends StatefulWidget {
   final String? activeBacksoundId;
   final bool isPlaying;
@@ -25,13 +25,13 @@ class _AmbientBackgroundState extends State<AmbientBackground>
   String? _currentLoadedVideoId;
   bool _isVideoInitialized = false;
 
-  static const Map<String, String> _videoMap = {
-    'rain': 'https://assets.mixkit.co/videos/preview/mixkit-rain-falling-on-the-water-of-a-lake-1941-large.mp4',
-    'ocean': 'https://assets.mixkit.co/videos/preview/mixkit-waves-coming-to-the-beach-5016-large.mp4',
-    'birds': 'https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-sunlight-529-large.mp4',
-    'night': 'https://assets.mixkit.co/videos/preview/mixkit-stars-in-the-night-sky-slow-motion-41865-large.mp4',
-    'wind': 'https://assets.mixkit.co/videos/preview/mixkit-wind-blowing-in-a-wheat-field-41584-large.mp4',
-    'fireplace': 'https://assets.mixkit.co/videos/preview/mixkit-fireplace-with-burning-logs-41508-large.mp4',
+  static const Map<String, String> _assetVideoMap = {
+    'rain': 'assets/videos/rain_video.mp4',
+    'ocean': 'assets/videos/wave_video.mp4',
+    'birds': 'assets/videos/morning_birds.mp4',
+    'wind': 'assets/videos/wind_video.mp4',
+    'fireplace': 'assets/videos/bonfire_video.mp4',
+    'default': 'assets/videos/playerBackground.mp4',
   };
 
   @override
@@ -51,12 +51,23 @@ class _AmbientBackgroundState extends State<AmbientBackground>
     if (oldWidget.activeBacksoundId != widget.activeBacksoundId) {
       _updateVideoPlayer(widget.activeBacksoundId);
     }
+    if (oldWidget.isPlaying != widget.isPlaying && _videoController != null && _isVideoInitialized) {
+      if (widget.isPlaying) {
+        _videoController?.play();
+      } else {
+        _videoController?.pause();
+      }
+    }
   }
 
   Future<void> _updateVideoPlayer(String? backsoundId) async {
-    if (backsoundId == _currentLoadedVideoId && _videoController != null) return;
+    final targetKey = (backsoundId != null && _assetVideoMap.containsKey(backsoundId))
+        ? backsoundId
+        : 'default';
 
-    _currentLoadedVideoId = backsoundId;
+    if (targetKey == _currentLoadedVideoId && _videoController != null) return;
+
+    _currentLoadedVideoId = targetKey;
     final oldController = _videoController;
     _videoController = null;
     if (mounted) setState(() => _isVideoInitialized = false);
@@ -68,19 +79,19 @@ class _AmbientBackgroundState extends State<AmbientBackground>
       } catch (_) {}
     }
 
-    if (backsoundId == null || !_videoMap.containsKey(backsoundId)) {
-      return;
-    }
+    final assetPath = _assetVideoMap[targetKey];
+    if (assetPath == null) return;
 
-    final videoUrl = _videoMap[backsoundId]!;
     try {
-      final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+      final controller = VideoPlayerController.asset(assetPath);
       await controller.initialize();
       await controller.setLooping(true);
-      await controller.setVolume(0.0); // Muted so audio player handles ambient sound
-      await controller.play();
+      await controller.setVolume(0.0); // Muted so audio player handles audio
+      if (widget.isPlaying) {
+        await controller.play();
+      }
 
-      if (mounted && _currentLoadedVideoId == backsoundId) {
+      if (mounted && _currentLoadedVideoId == targetKey) {
         setState(() {
           _videoController = controller;
           _isVideoInitialized = true;
@@ -89,7 +100,7 @@ class _AmbientBackgroundState extends State<AmbientBackground>
         await controller.dispose();
       }
     } catch (e) {
-      debugPrint('Error loading ambient video: $e');
+      debugPrint('Error loading local ambient video: $e');
     }
   }
 
@@ -107,7 +118,7 @@ class _AmbientBackgroundState extends State<AmbientBackground>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Layer 1: Ambient Canvas Art Engine (Instant zero-delay fallback)
+            // Layer 1: Ambient Canvas Art Engine (Instant zero-delay background)
             AnimatedBuilder(
               animation: _animController,
               builder: (context, child) {
@@ -121,11 +132,11 @@ class _AmbientBackgroundState extends State<AmbientBackground>
               },
             ),
 
-            // Layer 2: Real Aesthetic Looping Video Player
+            // Layer 2: Official Quranify Looping Video Player (Full bleed & seamless cover)
             if (_videoController != null && _isVideoInitialized)
               AnimatedOpacity(
                 opacity: _isVideoInitialized ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 600),
+                duration: const Duration(milliseconds: 500),
                 child: SizedBox.expand(
                   child: FittedBox(
                     fit: BoxFit.cover,
@@ -138,17 +149,17 @@ class _AmbientBackgroundState extends State<AmbientBackground>
                 ),
               ),
 
-            // Layer 3: Atmospheric Scrim Gradient for 100% Arabic Text & Lyrics Legibility
+            // Layer 3: Quranify Premium Scrim Gradient (Keeps Arabic typography & Translation ultra-readable)
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    const Color(0xFF0F1117).withValues(alpha: 0.85),
-                    const Color(0xFF0F1117).withValues(alpha: 0.60),
-                    const Color(0xFF0F1117).withValues(alpha: 0.88),
-                    const Color(0xFF0F1117),
+                    const Color(0xFF0B0E14).withValues(alpha: 0.85),
+                    const Color(0xFF0B0E14).withValues(alpha: 0.55),
+                    const Color(0xFF0B0E14).withValues(alpha: 0.88),
+                    const Color(0xFF0B0E14),
                   ],
                   stops: const [0.0, 0.35, 0.75, 1.0],
                 ),
