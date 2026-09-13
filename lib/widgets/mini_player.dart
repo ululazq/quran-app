@@ -162,17 +162,36 @@ class MiniPlayer extends StatelessWidget {
                           ),
                         ),
 
-                        // Action Controls
+                        // Action Controls Deck: [Prev, Play/Pause, Next, Close]
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            // 1. Previous Surah
                             IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.all(4),
+                              constraints: const BoxConstraints(),
+                              icon: const Icon(
+                                Icons.skip_previous_rounded,
+                                color: AppTheme.textPrimary,
+                                size: 24,
+                              ),
+                              tooltip: 'Surah Sebelumnya',
+                              onPressed: () => player.playPrevious(),
+                            ),
+                            const SizedBox(width: 4),
+
+                            // 2. Play / Pause
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.all(2),
+                              constraints: const BoxConstraints(),
                               icon: Icon(
                                 player.isPlaying
                                     ? Icons.pause_circle_filled_rounded
                                     : Icons.play_circle_filled_rounded,
                                 color: AppTheme.primaryEmerald,
-                                size: 34,
+                                size: 36,
                               ),
                               onPressed: () {
                                 if (player.isPlaying) {
@@ -182,20 +201,32 @@ class MiniPlayer extends StatelessWidget {
                                 }
                               },
                             ),
+                            const SizedBox(width: 4),
+
+                            // 3. Next Surah
                             IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.all(4),
+                              constraints: const BoxConstraints(),
                               icon: const Icon(
                                 Icons.skip_next_rounded,
                                 color: AppTheme.textPrimary,
-                                size: 28,
+                                size: 24,
                               ),
                               tooltip: 'Surah Selanjutnya',
                               onPressed: () => player.playNext(),
                             ),
+                            const SizedBox(width: 6),
+
+                            // 4. Close / Dismiss
                             IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.all(4),
+                              constraints: const BoxConstraints(),
                               icon: const Icon(
                                 Icons.close_rounded,
                                 color: AppTheme.textTertiary,
-                                size: 20,
+                                size: 18,
                               ),
                               tooltip: 'Tutup',
                               onPressed: () => player.stop(),

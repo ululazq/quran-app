@@ -6,6 +6,7 @@ import '../services/quran_api_service.dart';
 import '../models/backsound_model.dart';
 import '../models/ayah_model.dart';
 import '../widgets/backsound_visualizer.dart';
+import '../widgets/ambient_background.dart';
 import '../theme/app_theme.dart';
 
 class PlayerScreen extends StatefulWidget {
@@ -243,145 +244,165 @@ class _PlayerScreenState extends State<PlayerScreen> {
             if (activeAyahIndex > _loadedAyahs.length) activeAyahIndex = _loadedAyahs.length;
           }
 
-          return CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _buildAppBar(player, api),
-              _buildNowPlaying(player),
-              _buildVisualizer(player),
-              _buildProgressBar(player),
-              _buildYouTubeStyleControls(player),
-              _buildSecondaryUtilityRow(player, api),
-              _buildLyricsHeader(),
-              
-              // High-Performance Virtualized SliverList (Zero Lag on 200+ verses!)
-              if (_isLoadingAyahs && _loadedAyahs.isEmpty)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Center(
-                      child: CircularProgressIndicator(color: AppTheme.primaryEmerald),
-                    ),
-                  ),
-                )
-              else if (filteredAyahs.isEmpty)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Center(
-                      child: Text('Ayat tidak ditemukan', style: TextStyle(color: AppTheme.textTertiary)),
-                    ),
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final ayah = filteredAyahs[index];
-                        final isCurrentAyah = ayah.numberInSurah == activeAyahIndex && player.isPlaying;
+          // Active backsound id
+          String? activeBacksoundId;
+          for (final b in Backsound.presets) {
+            if (player.isBacksoundActive(b.id)) {
+              activeBacksoundId = b.id;
+              break;
+            }
+          }
 
-                        return Container(
-                          key: ValueKey('ayah_${ayah.numberInSurah}'),
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: isCurrentAyah
-                                ? AppTheme.primaryEmerald.withValues(alpha: 0.12)
-                                : AppTheme.bgCard,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isCurrentAyah
-                                  ? AppTheme.primaryEmerald.withValues(alpha: 0.5)
-                                  : AppTheme.divider.withValues(alpha: 0.5),
-                              width: isCurrentAyah ? 1.5 : 1,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Number & Copy Button
-                              Row(
+          return Stack(
+            children: [
+              // Dynamic Atmospheric Looping Visualizer
+              AmbientBackground(
+                activeBacksoundId: activeBacksoundId,
+                isPlaying: player.isPlaying,
+              ),
+
+              // Foreground Scroll Content
+              CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  _buildAppBar(player, api),
+                  _buildNowPlaying(player),
+                  _buildVisualizer(player),
+                  _buildProgressBar(player),
+                  _buildYouTubeStyleControls(player),
+                  _buildSecondaryUtilityRow(player, api),
+                  _buildLyricsHeader(),
+                  
+                  // High-Performance Virtualized SliverList (Zero Lag on 200+ verses!)
+                  if (_isLoadingAyahs && _loadedAyahs.isEmpty)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(40),
+                        child: Center(
+                          child: CircularProgressIndicator(color: AppTheme.primaryEmerald),
+                        ),
+                      ),
+                    )
+                  else if (filteredAyahs.isEmpty)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(40),
+                        child: Center(
+                          child: Text('Ayat tidak ditemukan', style: TextStyle(color: AppTheme.textTertiary)),
+                        ),
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final ayah = filteredAyahs[index];
+                            final isCurrentAyah = ayah.numberInSurah == activeAyahIndex && player.isPlaying;
+
+                            return Container(
+                              key: ValueKey('ayah_${ayah.numberInSurah}'),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: isCurrentAyah
+                                    ? AppTheme.primaryEmerald.withValues(alpha: 0.16)
+                                    : AppTheme.bgCard.withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isCurrentAyah
+                                      ? AppTheme.primaryEmerald.withValues(alpha: 0.6)
+                                      : AppTheme.divider.withValues(alpha: 0.5),
+                                  width: isCurrentAyah ? 1.5 : 1,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      color: isCurrentAyah
-                                          ? AppTheme.primaryEmerald
-                                          : AppTheme.bgElevated,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '${ayah.numberInSurah}',
-                                        style: TextStyle(
-                                          color: isCurrentAyah ? Colors.black : AppTheme.accentGoldLight,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
+                                  // Number & Copy Button
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 30,
+                                        height: 30,
+                                        decoration: BoxDecoration(
+                                          color: isCurrentAyah
+                                              ? AppTheme.primaryEmerald
+                                              : AppTheme.bgElevated,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            '${ayah.numberInSurah}',
+                                            style: TextStyle(
+                                              color: isCurrentAyah ? Colors.black : AppTheme.accentGoldLight,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                         ),
                                       ),
+                                      const Spacer(),
+                                      IconButton(
+                                        icon: const Icon(Icons.copy_rounded, size: 16, color: AppTheme.textTertiary),
+                                        tooltip: 'Salin Ayat',
+                                        onPressed: () {
+                                          Clipboard.setData(
+                                            ClipboardData(
+                                              text: '${ayah.textArabic}\n\nArtinya: "${ayah.translation}" (QS. ${player.currentSurah?.name}: ${ayah.numberInSurah})',
+                                            ),
+                                          );
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Ayat ${ayah.numberInSurah} disalin'),
+                                              duration: const Duration(seconds: 1),
+                                              backgroundColor: AppTheme.primaryEmerald,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+
+                                  // Arabic text (Uthmani)
+                                  Text(
+                                    ayah.textArabic,
+                                    textAlign: TextAlign.right,
+                                    textDirection: TextDirection.rtl,
+                                    style: TextStyle(
+                                      color: isCurrentAyah ? AppTheme.primaryEmeraldLight : AppTheme.textPrimary,
+                                      fontSize: 24,
+                                      height: 2.1,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  const Spacer(),
-                                  IconButton(
-                                    icon: const Icon(Icons.copy_rounded, size: 16, color: AppTheme.textTertiary),
-                                    tooltip: 'Salin Ayat',
-                                    onPressed: () {
-                                      Clipboard.setData(
-                                        ClipboardData(
-                                          text: '${ayah.textArabic}\n\nArtinya: "${ayah.translation}" (QS. ${player.currentSurah?.name}: ${ayah.numberInSurah})',
-                                        ),
-                                      );
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Ayat ${ayah.numberInSurah} disalin'),
-                                          duration: const Duration(seconds: 1),
-                                          backgroundColor: AppTheme.primaryEmerald,
-                                        ),
-                                      );
-                                    },
+                                  const SizedBox(height: 10),
+
+                                  // Indonesian Translation
+                                  Text(
+                                    ayah.translation,
+                                    textAlign: TextAlign.left,
+                                    style: TextStyle(
+                                      color: isCurrentAyah ? AppTheme.textPrimary : AppTheme.textSecondary,
+                                      fontSize: 13,
+                                      height: 1.5,
+                                    ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-
-                              // Arabic text (Uthmani)
-                              Text(
-                                ayah.textArabic,
-                                textAlign: TextAlign.right,
-                                textDirection: TextDirection.rtl,
-                                style: TextStyle(
-                                  color: isCurrentAyah ? AppTheme.primaryEmeraldLight : AppTheme.textPrimary,
-                                  fontSize: 24,
-                                  height: 2.1,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-
-                              // Indonesian Translation
-                              Text(
-                                ayah.translation,
-                                textAlign: TextAlign.left,
-                                style: TextStyle(
-                                  color: isCurrentAyah ? AppTheme.textPrimary : AppTheme.textSecondary,
-                                  fontSize: 13,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      childCount: filteredAyahs.length,
-                      addAutomaticKeepAlives: false,
-                      addRepaintBoundaries: true,
+                            );
+                          },
+                          childCount: filteredAyahs.length,
+                          addAutomaticKeepAlives: false,
+                          addRepaintBoundaries: true,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              const SliverToBoxAdapter(child: SizedBox(height: 56)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 56)),
+                ],
+              ),
             ],
           );
         },
@@ -394,7 +415,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
       expandedHeight: 80,
       floating: false,
       pinned: true,
-      backgroundColor: AppTheme.bgPrimary,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.textPrimary, size: 34),
         onPressed: () => Navigator.pop(context),
