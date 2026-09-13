@@ -155,19 +155,19 @@ class _AmbientBackgroundState extends State<AmbientBackground>
                 ),
               ),
 
-            // Layer 3: Quranify Premium Scrim Gradient (Keeps Arabic typography & Translation ultra-readable)
+            // Layer 3: Minimal Ultra-Subtle Scrim (Ensures video is vivid & crystal clear while keeping UI readable)
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    const Color(0xFF0B0E14).withValues(alpha: 0.85),
-                    const Color(0xFF0B0E14).withValues(alpha: 0.55),
-                    const Color(0xFF0B0E14).withValues(alpha: 0.88),
-                    const Color(0xFF0B0E14),
+                    Colors.black.withValues(alpha: 0.35),
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.15),
+                    Colors.black.withValues(alpha: 0.55),
                   ],
-                  stops: const [0.0, 0.35, 0.75, 1.0],
+                  stops: const [0.0, 0.25, 0.75, 1.0],
                 ),
               ),
             ),
