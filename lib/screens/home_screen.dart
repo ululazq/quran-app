@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/quran_api_service.dart';
 import '../services/audio_player_service.dart';
@@ -882,25 +883,88 @@ class _SettingsViewState extends State<_SettingsView> {
             Text('Tentang Quranizer', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Aplikasi Al-Quran Digital Modern',
-              style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Dilengkapi dengan tilawah dari Qari internasional terbaik, pemutar audio background tanpa henti, lirik ayat per ayat bahasa Indonesia, serta backsound relaksasi suara alam (hujan, ombak, angin, kicau burung, suasana malam, dan perapian).',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.5),
-            ),
-            SizedBox(height: 12),
-            Text(
-              'Sumber API: MP3Quran.net & AlQuran.cloud\nVersi: 1.0.0 Stable Pro Max',
-              style: TextStyle(color: AppTheme.textTertiary, fontSize: 12),
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Aplikasi Al-Quran Digital Modern',
+                style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Dilengkapi dengan tilawah dari Qari internasional terbaik, pemutar audio background tanpa henti, lirik ayat per ayat bahasa Indonesia, serta backsound relaksasi suara alam (hujan, ombak, angin, kicau burung, suasana malam, dan perapian).',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.bgElevated,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.primaryEmerald.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.code_rounded, color: AppTheme.primaryEmerald, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Pembuat / Kontributor:',
+                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'ululazq',
+                          style: TextStyle(color: AppTheme.accentGoldLight, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Divider(color: AppTheme.divider, height: 1),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () {
+                        Clipboard.setData(const ClipboardData(text: '085645567856'));
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Nomor 085645567856 berhasil disalin!'),
+                            backgroundColor: AppTheme.primaryEmerald,
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            Icon(Icons.volunteer_activism_rounded, color: Colors.redAccent, size: 18),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Kritik, saran dan gopay hubungi 085645567856',
+                                style: TextStyle(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                            Icon(Icons.copy_rounded, size: 16, color: AppTheme.primaryEmerald),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Sumber API: MP3Quran.net & AlQuran.cloud\nVersi: 1.0.0 Stable Pro Max',
+                style: TextStyle(color: AppTheme.textTertiary, fontSize: 12),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -960,7 +1024,7 @@ class _SettingsViewState extends State<_SettingsView> {
                     style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 2),
-                  Text('Versi 1.0.0 (Release Stable)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                  Text('Dibuat oleh ululazq • Versi 1.0.0', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                 ],
               ),
             ],
@@ -1002,6 +1066,49 @@ class _SettingsViewState extends State<_SettingsView> {
           subtitle: _selectedQuality,
           trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.textTertiary),
           onTap: _showQualityDialog,
+        ),
+
+        const SizedBox(height: 20),
+        const Text(
+          'KONTRIBUTOR & DUKUNGAN',
+          style: TextStyle(color: AppTheme.primaryEmerald, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
+        ),
+        const SizedBox(height: 8),
+
+        _buildActionTile(
+          icon: Icons.person_rounded,
+          title: 'Pembuat / Kontributor',
+          subtitle: 'ululazq',
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryEmerald.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.primaryEmerald.withValues(alpha: 0.4)),
+            ),
+            child: const Text(
+              'Creator',
+              style: TextStyle(color: AppTheme.primaryEmerald, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ),
+          onTap: () {},
+        ),
+
+        _buildActionTile(
+          icon: Icons.volunteer_activism_rounded,
+          title: 'Kritik, Saran & GoPay',
+          subtitle: 'kritik, saran dan gopay hubungi 085645567856',
+          trailing: const Icon(Icons.copy_rounded, color: AppTheme.primaryEmerald, size: 20),
+          onTap: () {
+            Clipboard.setData(const ClipboardData(text: '085645567856'));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Nomor 085645567856 berhasil disalin ke clipboard!'),
+                backgroundColor: AppTheme.primaryEmerald,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          },
         ),
 
         const SizedBox(height: 20),
