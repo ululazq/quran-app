@@ -147,6 +147,11 @@ class AudioPlayerService extends ChangeNotifier {
       if (!_isChangingTrack) {
         _isPlaying = state.playing;
       }
+      if (state.playing) {
+        _resumeActiveBacksounds();
+      } else {
+        _pauseActiveBacksounds();
+      }
       notifyListeners();
 
       if (state.processingState == ProcessingState.completed) {
@@ -322,18 +327,21 @@ class AudioPlayerService extends ChangeNotifier {
 
   Future<void> pause() async {
     await _quranPlayer.pause();
+    await _pauseActiveBacksounds();
     _positionTimer?.cancel();
     notifyListeners();
   }
 
   Future<void> resume() async {
     await _quranPlayer.play();
+    await _resumeActiveBacksounds();
     _startPositionTimer();
     notifyListeners();
   }
 
   Future<void> stop() async {
     await _quranPlayer.stop();
+    await _pauseActiveBacksounds();
     _positionTimer?.cancel();
     _position = Duration.zero;
     _currentSurah = null;
@@ -360,6 +368,26 @@ class AudioPlayerService extends ChangeNotifier {
   bool isBacksoundActive(String id) => _activeBacksoundIds.contains(id);
   bool isBacksoundLoading(String id) => _loadingBacksoundIds.contains(id);
   double getBacksoundVolume(String id) => _volumes[id] ?? 0.3;
+
+  Future<void> _pauseActiveBacksounds() async {
+    for (final id in _activeBacksoundIds) {
+      try {
+        await _backsounds[id]?.pause();
+      } catch (e) {
+        debugPrint('Error pausing backsound $id: $e');
+      }
+    }
+  }
+
+  Future<void> _resumeActiveBacksounds() async {
+    for (final id in _activeBacksoundIds) {
+      try {
+        await _backsounds[id]?.resume();
+      } catch (e) {
+        debugPrint('Error resuming backsound $id: $e');
+      }
+    }
+  }
 
   Future<void> toggleBacksound(Backsound backsound) async {
     if (_activeBacksoundIds.contains(backsound.id)) {
@@ -396,6 +424,9 @@ class AudioPlayerService extends ChangeNotifier {
 
       await player.setVolume(volume);
       await player.play(ap.AssetSource(relativeAssetPath));
+      if (!_isPlaying) {
+        await player.pause();
+      }
     } catch (e) {
       debugPrint('Error playing backsound ${backsound.id}: $e');
       _activeBacksoundIds.remove(backsound.id);
