@@ -1,0 +1,33 @@
+workflows:
+  android-release:
+    name: Android Release APK
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    environment:
+      groups:
+        - keystore_credentials # Store signing keys here
+      vars:
+        PACKAGE_NAME: "com.example.quran_app"
+        BUILD_NUMBER: 1
+      flutter: stable
+    scripts:
+      - name: Setup Android SDK
+        script: |
+          sudo gem install bundler
+          bundle install
+      - name: Build Android APK
+        script: |
+          flutter packages pub get
+          flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/bundle/release/*.aab
+    publishing:
+      email:
+        recipients:
+          - user@example.com
+      scripts:
+        - name: Upload to Firebase App Distribution
+          script: |
+            # Add Firebase upload script if needed
+            echo "APK built successfully"
