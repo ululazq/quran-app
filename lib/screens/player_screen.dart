@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:just_audio/just_audio.dart';
-import 'services/audio_player_service.dart';
-import 'services/quran_api_service.dart';
-import 'models/backsound_model.dart';
+import '../services/audio_player_service.dart';
+import '../services/quran_api_service.dart';
+import '../models/backsound_model.dart';
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
@@ -110,18 +110,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFF1DB954),
-                    const Color(0xFF1AA34A),
-                    const Color(0xFF15803D),
+                    Color(0xFF1DB954),
+                    Color(0xFF1AA34A),
+                    Color(0xFF15803D),
                   ],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1DB954).withOpacity(0.3),
+                    color: const Color(0xFF1DB954).withValues(alpha: 0.3),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
@@ -320,7 +320,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: _searchController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'Cari ayat...',
                 hintStyle: TextStyle(color: Colors.grey),
                 filled: true,

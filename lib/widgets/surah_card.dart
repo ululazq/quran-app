@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'models/surah_model.dart';
+import '../models/surah_model.dart';
 
 class SurahCard extends StatelessWidget {
   final Surah surah;

@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'services/quran_api_service.dart';
-import 'services/audio_player_service.dart';
-import 'models/qari_model.dart';
-import 'models/surah_model.dart';
-import 'models/backsound_model.dart';
-import 'widgets/surah_card.dart';
-import 'widgets/qari_card.dart';
-import 'screens/player_screen.dart';
+import '../services/quran_api_service.dart';
+import '../services/audio_player_service.dart';
+import '../models/backsound_model.dart';
+import '../widgets/surah_card.dart';
+import '../widgets/qari_card.dart';
+import 'player_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

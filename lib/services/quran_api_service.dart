@@ -6,7 +6,6 @@ import '../models/surah_model.dart';
 
 class QuranApiService extends ChangeNotifier {
   static const _quranCloudBase = 'https://api.alquran.cloud/v1';
-  static const _mp3quranBase = 'https://server11.mp3quran.net/afs';
 
   List<Qari> _qaris = [];
   List<Surah> _surahs = [];

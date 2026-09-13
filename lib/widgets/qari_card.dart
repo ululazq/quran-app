@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'models/qari_model.dart';
+import '../models/qari_model.dart';
 
 class QariCard extends StatelessWidget {
   final Qari qari;

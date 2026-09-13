@@ -1,8 +1,6 @@
-// Flutter Lints
-analyzer:
-  strong-mode:
-    implicit-casts: false
-    implicit-dynamic: false
+# Flutter Lints
+include: package:flutter_lints/flutter.yaml
+
 linter:
   rules:
     - prefer_const_constructors

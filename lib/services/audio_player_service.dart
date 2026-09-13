@@ -14,7 +14,7 @@ class AudioPlayerService extends ChangeNotifier {
   Surah? _currentSurah;
   Qari? _currentQari;
   String? _currentUrl;
-  PlayerState _playerState = PlayerState.stopped;
+  PlayerState _playerState = PlayerState(false, ProcessingState.idle);
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
@@ -58,7 +58,7 @@ class AudioPlayerService extends ChangeNotifier {
 
     _quranPlayer.durationStream.listen((dur) {
       if (dur != null) {
-        _duration = dur!;
+        _duration = dur;
         notifyListeners();
       }
     });
@@ -71,7 +71,17 @@ class AudioPlayerService extends ChangeNotifier {
     _currentUrl = url;
 
     try {
-      await _quranPlayer.setUrl(AudioSource.uri(Uri.parse(url)));
+      await _quranPlayer.setAudioSource(
+        AudioSource.uri(
+          Uri.parse(url),
+          tag: MediaItem(
+            id: '${surah.number}',
+            album: qari.name,
+            title: surah.name,
+            displaySubtitle: surah.nameArabic,
+          ),
+        ),
+      );
       await _quranPlayer.play();
       _startPositionTimer();
       notifyListeners();
@@ -137,7 +147,7 @@ class AudioPlayerService extends ChangeNotifier {
   }
 
   Future<void> toggleBacksound(Backsound backsound) async {
-    final isActive = _volumes[backsound.id] ?? 0 > 0;
+    final isActive = (_volumes[backsound.id] ?? 0) > 0;
 
     if (isActive) {
       await setBacksoundVolume(backsound.id, 0);

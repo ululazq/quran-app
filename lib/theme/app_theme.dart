@@ -7,7 +7,6 @@ class AppTheme {
   static const _primaryDark = Color(0xFF1AA34A);
   static const _background = Color(0xFF121212);
   static const _surface = Color(0xFF1E1E1E);
-  static const _surfaceVariant = Color(0xFF282828);
   static const _textPrimary = Color(0xFFFFFFFF);
   static const _textSecondary = Color(0xFFB3B3B3);
   static const _textTertiary = Color(0xFF6E6E6E);
