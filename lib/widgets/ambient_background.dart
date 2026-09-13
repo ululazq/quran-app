@@ -1,4 +1,4 @@
-﻿import 'dart:math';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -51,10 +51,10 @@ class _AmbientBackgroundState extends State<AmbientBackground>
     if (oldWidget.activeBacksoundId != widget.activeBacksoundId) {
       _updateVideoPlayer(widget.activeBacksoundId);
     }
-    if (oldWidget.isPlaying != widget.isPlaying && _videoController != null && _isVideoInitialized) {
-      if (widget.isPlaying) {
+    if (_videoController != null && _isVideoInitialized) {
+      if (widget.isPlaying && !_videoController!.value.isPlaying) {
         _videoController?.play();
-      } else {
+      } else if (!widget.isPlaying && _videoController!.value.isPlaying) {
         _videoController?.pause();
       }
     }
@@ -83,10 +83,13 @@ class _AmbientBackgroundState extends State<AmbientBackground>
     if (assetPath == null) return;
 
     try {
-      final controller = VideoPlayerController.asset(assetPath);
+      final controller = VideoPlayerController.asset(
+        assetPath,
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+      );
       await controller.initialize();
       await controller.setLooping(true);
-      await controller.setVolume(0.0); // Muted so audio player handles audio
+      await controller.setVolume(0.0); // Completely muted so it never requests audio focus
       if (widget.isPlaying) {
         await controller.play();
       }
@@ -96,6 +99,9 @@ class _AmbientBackgroundState extends State<AmbientBackground>
           _videoController = controller;
           _isVideoInitialized = true;
         });
+        if (widget.isPlaying && !controller.value.isPlaying) {
+          controller.play();
+        }
       } else {
         await controller.dispose();
       }

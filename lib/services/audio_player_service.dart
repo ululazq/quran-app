@@ -112,24 +112,25 @@ class AudioPlayerService extends ChangeNotifier {
     }
   }
 
+  static final ap.AudioContext _backsoundAudioContext = ap.AudioContext(
+    android: const ap.AudioContextAndroid(
+      isSpeakerphoneOn: false,
+      stayAwake: false,
+      contentType: ap.AndroidContentType.music,
+      usageType: ap.AndroidUsageType.media,
+      audioFocus: ap.AndroidAudioFocus.none,
+    ),
+    iOS: ap.AudioContextIOS(
+      category: ap.AVAudioSessionCategory.ambient,
+      options: const {
+        ap.AVAudioSessionOptions.mixWithOthers,
+      },
+    ),
+  );
+
   Future<void> initialize() async {
     try {
-      final audioContext = ap.AudioContext(
-        android: const ap.AudioContextAndroid(
-          isSpeakerphoneOn: false,
-          stayAwake: false,
-          contentType: ap.AndroidContentType.music,
-          usageType: ap.AndroidUsageType.media,
-          audioFocus: ap.AndroidAudioFocus.none,
-        ),
-        iOS: ap.AudioContextIOS(
-          category: ap.AVAudioSessionCategory.ambient,
-          options: const {
-            ap.AVAudioSessionOptions.mixWithOthers,
-          },
-        ),
-      );
-      await ap.AudioPlayer.global.setAudioContext(audioContext);
+      await ap.AudioPlayer.global.setAudioContext(_backsoundAudioContext);
     } catch (e) {
       debugPrint('Warning configuring audioplayers context: $e');
     }
@@ -420,7 +421,10 @@ class AudioPlayerService extends ChangeNotifier {
       if (player == null) {
         player = ap.AudioPlayer();
         _backsounds[backsound.id] = player;
+        await player.setAudioContext(_backsoundAudioContext);
         await player.setReleaseMode(ap.ReleaseMode.loop);
+      } else {
+        await player.setAudioContext(_backsoundAudioContext);
       }
       
       final relativeAssetPath = backsound.assetPath.startsWith('assets/')
