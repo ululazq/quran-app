@@ -22,7 +22,7 @@ workflows:
           # Remove iOS folder to prevent iOS build attempts
           rm -rf ios
           flutter packages pub get
-          flutter build apk --release --no-tree-shake-icons --android-skip-build-dependency-validation
+          flutter build appbundle --release --no-tree-shake-icons --android-skip-build-dependency-validation
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
       - build/app/outputs/bundle/release/*.aab

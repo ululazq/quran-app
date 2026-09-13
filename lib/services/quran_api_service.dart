@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import 'models/qari_model.dart';
-import 'models/surah_model.dart';
+import '../models/qari_model.dart';
+import '../models/surah_model.dart';
 
 class QuranApiService extends ChangeNotifier {
   static const _quranCloudBase = 'https://api.alquran.cloud/v1';

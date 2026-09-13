@@ -318,7 +318,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
-            const TextField(
+            TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Cari ayat...',

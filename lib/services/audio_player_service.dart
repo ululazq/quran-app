@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:flutter/foundation.dart';
-import 'models/qari_model.dart';
-import 'models/surah_model.dart';
-import 'models/backsound_model.dart';
+import '../models/qari_model.dart';
+import '../models/surah_model.dart';
+import '../models/backsound_model.dart';
 
 class AudioPlayerService extends ChangeNotifier {
   final AudioPlayer _quranPlayer = AudioPlayer();
@@ -14,7 +14,7 @@ class AudioPlayerService extends ChangeNotifier {
   Surah? _currentSurah;
   Qari? _currentQari;
   String? _currentUrl;
-  PlayerState _playerState = PlayerState.stop;
+  PlayerState _playerState = PlayerState.stopped;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
@@ -38,10 +38,6 @@ class AudioPlayerService extends ChangeNotifier {
       androidNotificationOngoing: true,
       androidShowNotificationBadge: true,
       androidNotificationIcon: 'mipmap/ic_launcher',
-      webMediaControls: const [
-        'rewind', 'play_pause', 'fast_forward',
-        'volume_slider',
-      ],
       androidNotificationClickStartsActivity: true,
     );
 
