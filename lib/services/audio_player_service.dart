@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
-import 'package:audio_session/audio_session.dart';
+import 'package:audioplayers/audioplayers.dart' as ap;
 import 'package:flutter/foundation.dart';
 import '../models/qari_model.dart';
 import '../models/surah_model.dart';
@@ -9,7 +9,7 @@ import '../models/backsound_model.dart';
 
 class AudioPlayerService extends ChangeNotifier {
   final AudioPlayer _quranPlayer = AudioPlayer();
-  final Map<String, AudioPlayer> _backsounds = {};
+  final Map<String, ap.AudioPlayer> _backsounds = {};
   final Map<String, double> _volumes = {};
 
   List<Surah> _surahList = [];
@@ -53,10 +53,24 @@ class AudioPlayerService extends ChangeNotifier {
 
   Future<void> initialize() async {
     try {
-      final session = await AudioSession.instance;
-      await session.configure(const AudioSessionConfiguration.music());
+      final audioContext = ap.AudioContext(
+        android: const ap.AudioContextAndroid(
+          isSpeakerphoneOn: false,
+          stayAwake: false,
+          contentType: ap.AndroidContentType.music,
+          usageType: ap.AndroidUsageType.media,
+          audioFocus: ap.AndroidAudioFocus.none,
+        ),
+        iOS: ap.AudioContextIOS(
+          category: ap.AVAudioSessionCategory.ambient,
+          options: const {
+            ap.AVAudioSessionOptions.mixWithOthers,
+          },
+        ),
+      );
+      await ap.AudioPlayer.global.setAudioContext(audioContext);
     } catch (e) {
-      debugPrint('Warning configuring audio session: $e');
+      debugPrint('Warning configuring audioplayers context: $e');
     }
 
     try {
@@ -234,6 +248,13 @@ class AudioPlayerService extends ChangeNotifier {
   }
 
   Future<void> playBacksound(Backsound backsound) async {
+    // Stop other active backsounds so only one clean ambient sound plays at a time
+    for (final otherId in _activeBacksoundIds.toList()) {
+      if (otherId != backsound.id) {
+        await stopBacksound(otherId);
+      }
+    }
+
     _activeBacksoundIds.add(backsound.id);
     _loadingBacksoundIds.add(backsound.id);
     final volume = _volumes[backsound.id] ?? backsound.defaultVolume;
@@ -241,19 +262,19 @@ class AudioPlayerService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      AudioPlayer? player = _backsounds[backsound.id];
+      ap.AudioPlayer? player = _backsounds[backsound.id];
       if (player == null) {
-        player = AudioPlayer();
+        player = ap.AudioPlayer();
         _backsounds[backsound.id] = player;
-        if (backsound.assetPath.startsWith('http')) {
-          await player.setUrl(backsound.assetPath);
-        } else {
-          await player.setAsset(backsound.assetPath);
-        }
-        await player.setLoopMode(LoopMode.all);
+        await player.setReleaseMode(ap.ReleaseMode.loop);
       }
+      
+      final relativeAssetPath = backsound.assetPath.startsWith('assets/')
+          ? backsound.assetPath.substring(7)
+          : backsound.assetPath;
+
       await player.setVolume(volume);
-      await player.play();
+      await player.play(ap.AssetSource(relativeAssetPath));
     } catch (e) {
       debugPrint('Error playing backsound ${backsound.id}: $e');
       _activeBacksoundIds.remove(backsound.id);
@@ -269,9 +290,9 @@ class AudioPlayerService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _backsounds[id]?.pause();
+      await _backsounds[id]?.stop();
     } catch (e) {
-      debugPrint('Error pausing backsound $id: $e');
+      debugPrint('Error stopping backsound $id: $e');
     }
   }
 
@@ -285,7 +306,7 @@ class AudioPlayerService extends ChangeNotifier {
 
   void stopAllBacksounds() {
     for (final id in _activeBacksoundIds.toList()) {
-      _backsounds[id]?.pause();
+      _backsounds[id]?.stop();
     }
     _activeBacksoundIds.clear();
     _loadingBacksoundIds.clear();
