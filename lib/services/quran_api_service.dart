@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import '../models/qari_model.dart';
 import '../models/surah_model.dart';
+import '../models/ayah_model.dart';
 
 class QuranApiService extends ChangeNotifier {
   static const _quranCloudBase = 'https://api.alquran.cloud/v1';
@@ -101,22 +102,52 @@ class QuranApiService extends ChangeNotifier {
     return 'https://server11.mp3quran.net/afs/$padded.mp3';
   }
 
-  /// Mendapatkan teks Arab untuk setiap ayat
-  Future<List<Map<String, dynamic>>> loadAyahs(int surahNumber) async {
+  final Map<int, List<Ayah>> _ayahsCache = {};
+  bool _isLoadingAyahs = false;
+  bool get isLoadingAyahs => _isLoadingAyahs;
+
+  /// Mendapatkan teks Arab dan terjemahan Indonesia untuk setiap ayat
+  Future<List<Ayah>> loadAyahs(int surahNumber) async {
+    if (_ayahsCache.containsKey(surahNumber)) {
+      return _ayahsCache[surahNumber]!;
+    }
+
+    _isLoadingAyahs = true;
+    notifyListeners();
+
     try {
       final response = await http.get(
-        Uri.parse('$_quranCloudBase/surah/$surahNumber/ar.alafasy'),
-      );
+        Uri.parse('$_quranCloudBase/surah/$surahNumber/editions/quran-uthmani,id.indonesian'),
+      ).timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final ayahs = data['data']['ayahs'] as List? ?? [];
-        return ayahs.map((a) => a as Map<String, dynamic>).toList();
+        final editions = data['data'] as List? ?? [];
+        if (editions.length >= 2) {
+          final arabicList = (editions[0]['ayahs'] as List? ?? []);
+          final translationList = (editions[1]['ayahs'] as List? ?? []);
+
+          final List<Ayah> ayahs = [];
+          for (int i = 0; i < arabicList.length; i++) {
+            final ar = arabicList[i] as Map<String, dynamic>;
+            final tr = i < translationList.length
+                ? (translationList[i] as Map<String, dynamic>)
+                : <String, dynamic>{};
+            ayahs.add(Ayah.fromEditions(ar, tr));
+          }
+
+          _ayahsCache[surahNumber] = ayahs;
+          return ayahs;
+        }
       }
     } catch (e) {
-      debugPrint('Error loading ayahs: $e');
+      debugPrint('Error loading ayahs for surah $surahNumber: $e');
+    } finally {
+      _isLoadingAyahs = false;
+      notifyListeners();
     }
-    return [];
+
+    return _ayahsCache[surahNumber] ?? [];
   }
 
   final Set<int> _favoriteSurahNumbers = {};

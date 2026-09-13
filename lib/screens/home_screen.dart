@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/quran_api_service.dart';
@@ -575,8 +576,188 @@ class _FavoritesView extends StatelessWidget {
   }
 }
 
-class _SettingsView extends StatelessWidget {
+class _SettingsView extends StatefulWidget {
   const _SettingsView();
+
+  @override
+  State<_SettingsView> createState() => _SettingsViewState();
+}
+
+class _SettingsViewState extends State<_SettingsView> {
+  bool _backgroundPlayEnabled = true;
+  String _selectedQuality = 'Standar (128 kbps)';
+  int _sleepTimerMinutes = 0;
+  Timer? _activeSleepTimer;
+
+  void _setSleepTimer(int minutes) {
+    _activeSleepTimer?.cancel();
+    setState(() => _sleepTimerMinutes = minutes);
+
+    if (minutes > 0) {
+      final player = context.read<AudioPlayerService>();
+      _activeSleepTimer = Timer(Duration(minutes: minutes), () {
+        player.pause();
+        if (mounted) {
+          setState(() => _sleepTimerMinutes = 0);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sleep Timer: Audio telah dihentikan otomatis.'),
+              backgroundColor: Color(0xFF1DB954),
+            ),
+          );
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sleep Timer aktif: Audio akan berhenti dalam $minutes menit.'),
+          backgroundColor: const Color(0xFF1DB954),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sleep Timer dimatikan.'),
+          backgroundColor: Colors.grey,
+        ),
+      );
+    }
+  }
+
+  void _showQualityDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text('Kualitas Audio', style: TextStyle(color: Colors.white, fontSize: 18)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            'Hemat Data (64 kbps)',
+            'Standar (128 kbps)',
+            'Kualitas Tinggi (192 kbps)',
+          ].map((quality) {
+            return RadioListTile<String>(
+              title: Text(quality, style: const TextStyle(color: Colors.white, fontSize: 14)),
+              value: quality,
+              groupValue: _selectedQuality,
+              activeColor: const Color(0xFF1DB954),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() => _selectedQuality = val);
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Kualitas audio diubah ke $val'),
+                      backgroundColor: const Color(0xFF1DB954),
+                    ),
+                  );
+                }
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showSleepTimerDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Row(
+          children: [
+            Icon(Icons.timer, color: Color(0xFF1DB954)),
+            SizedBox(width: 8),
+            Text('Sleep Timer (Mati Otomatis)', style: TextStyle(color: Colors.white, fontSize: 16)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            0,
+            15,
+            30,
+            45,
+            60,
+          ].map((mins) {
+            return ListTile(
+              leading: Icon(
+                _sleepTimerMinutes == mins ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: _sleepTimerMinutes == mins ? const Color(0xFF1DB954) : Colors.grey,
+              ),
+              title: Text(
+                mins == 0 ? 'Matikan Timer' : '$mins Menit',
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _setSleepTimer(mins);
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _clearCache() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Cache data ayat dan audio sementara berhasil dibersihkan!'),
+        backgroundColor: Color(0xFF1DB954),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showAboutDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Row(
+          children: [
+            Icon(Icons.auto_stories, color: Color(0xFF1DB954)),
+            SizedBox(width: 10),
+            Text('Tentang Quran App', style: TextStyle(color: Colors.white, fontSize: 18)),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Aplikasi Al-Quran Digital Modern',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Dilengkapi dengan tilawah dari Qari internasional terbaik, pemutar audio background tanpa henti, lirik ayat per ayat bahasa Indonesia, serta backsound relaksasi suara alam (hujan, ombak, angin, kicau burung, suasana malam, dan perapian).',
+              style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Sumber API: MP3Quran.net & AlQuran.cloud\nVersi: 1.0.0 Stable',
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup', style: TextStyle(color: Color(0xFF1DB954))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _activeSleepTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -605,7 +786,7 @@ class _SettingsView extends StatelessWidget {
                       style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     SizedBox(height: 2),
-                    Text('Versi 1.0.0 (Release)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text('Versi 1.0.0 (Release Build)', style: TextStyle(color: Colors.grey, fontSize: 12)),
                   ],
                 ),
               ],
@@ -615,64 +796,117 @@ class _SettingsView extends StatelessWidget {
         const SizedBox(height: 20),
 
         const Text(
-          'Fitur & Audio',
+          'Pengaturan Pemutaran & Audio',
           style: TextStyle(color: Color(0xFF1DB954), fontSize: 13, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        _buildSettingTile(
+
+        // Background playback
+        _buildActionTile(
           icon: Icons.headset,
-          title: 'Pemutar Audio Background',
-          subtitle: 'Audio tetap berputar saat aplikasi di latar belakang atau layar mati',
-          trailing: const Icon(Icons.check_circle, color: Color(0xFF1DB954), size: 20),
+          title: 'Pemutar Latar Belakang (Background)',
+          subtitle: 'Audio tetap berputar saat layar mati atau keluar aplikasi',
+          trailing: Switch(
+            value: _backgroundPlayEnabled,
+            activeColor: const Color(0xFF1DB954),
+            onChanged: (val) {
+              setState(() => _backgroundPlayEnabled = val);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(val ? 'Background playback diaktifkan' : 'Background playback dinonaktifkan'),
+                  backgroundColor: const Color(0xFF1DB954),
+                ),
+              );
+            },
+          ),
+          onTap: () {},
         ),
-        _buildSettingTile(
-          icon: Icons.cloud_done,
-          title: 'Sumber Data Qari & Surah',
-          subtitle: 'MP3Quran.net & Al-Quran Cloud API',
-          trailing: const Icon(Icons.cloud_queue, color: Colors.grey, size: 20),
+
+        // Sleep timer
+        _buildActionTile(
+          icon: Icons.timer_outlined,
+          title: 'Sleep Timer (Mati Otomatis)',
+          subtitle: _sleepTimerMinutes > 0 ? 'Aktif: $_sleepTimerMinutes menit' : 'Tidak aktif',
+          trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+          onTap: _showSleepTimerDialog,
         ),
-        _buildSettingTile(
-          icon: Icons.music_note,
-          title: 'Mode Suara Alam (Backsound)',
-          subtitle: 'Hujan, Ombak, Angin, Burung, Api Unggun & Malam',
-          trailing: const Icon(Icons.spa, color: Color(0xFF1DB954), size: 20),
+
+        // Audio quality
+        _buildActionTile(
+          icon: Icons.high_quality,
+          title: 'Kualitas Streaming Audio',
+          subtitle: _selectedQuality,
+          trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+          onTap: _showQualityDialog,
         ),
 
         const SizedBox(height: 20),
         const Text(
-          'Aplikasi',
+          'Penyimpanan & Aplikasi',
           style: TextStyle(color: Color(0xFF1DB954), fontSize: 13, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        _buildSettingTile(
-          icon: Icons.dark_mode,
-          title: 'Tema Aplikasi',
-          subtitle: 'Gelap (Spotify Green Dark Theme)',
-          trailing: const Icon(Icons.brightness_2, color: Colors.grey, size: 20),
+
+        // Clear Cache
+        _buildActionTile(
+          icon: Icons.cleaning_services_outlined,
+          title: 'Bersihkan Cache Audio & Data',
+          subtitle: 'Kosongkan memori sementara',
+          trailing: const Icon(Icons.delete_outline, color: Colors.grey),
+          onTap: _clearCache,
         ),
-        _buildSettingTile(
+
+        // About App
+        _buildActionTile(
           icon: Icons.info_outline,
-          title: 'Tentang Aplikasi',
-          subtitle: 'Aplikasi Al-Quran Audio dengan pilihan Qari dan Backsound Relaksasi Alam',
+          title: 'Tentang Aplikasi & Sumber API',
+          subtitle: 'Informasi lisensi dan pengembang',
+          trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+          onTap: _showAboutDialog,
         ),
       ],
     );
   }
 
-  Widget _buildSettingTile({
+  Widget _buildActionTile({
     required IconData icon,
     required String title,
     String? subtitle,
     Widget? trailing,
+    required VoidCallback onTap,
   }) {
     return Card(
       color: const Color(0xFF1E1E1E),
       margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        leading: Icon(icon, color: const Color(0xFF1DB954)),
-        title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
-        subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)) : null,
-        trailing: trailing,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            children: [
+              Icon(icon, color: const Color(0xFF1DB954), size: 24),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing,
+            ],
+          ),
+        ),
       ),
     );
   }

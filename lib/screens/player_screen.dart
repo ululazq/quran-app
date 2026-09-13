@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:just_audio/just_audio.dart';
 import '../services/audio_player_service.dart';
 import '../services/quran_api_service.dart';
 import '../models/backsound_model.dart';
+import '../models/ayah_model.dart';
+import '../widgets/backsound_visualizer.dart';
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
@@ -17,8 +20,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   late StreamSubscription<PlayerState> _playerStateSubscription;
   late StreamSubscription<Duration> _positionSubscription;
   late StreamSubscription<Duration?> _durationSubscription;
-  
+
   final TextEditingController _searchController = TextEditingController();
+  String _searchAyahQuery = '';
 
   @override
   void initState() {
@@ -51,11 +55,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
             slivers: [
               _buildAppBar(player, api),
               _buildNowPlaying(player),
+              _buildVisualizer(player),
               _buildProgressBar(player),
               _buildControls(player),
               _buildBacksoundSection(player),
-              _buildLyricsSection(api),
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+              _buildLyricsSection(player, api),
+              const SliverToBoxAdapter(child: SizedBox(height: 48)),
             ],
           );
         },
@@ -65,7 +70,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Widget _buildAppBar(AudioPlayerService player, QuranApiService api) {
     return SliverAppBar(
-      expandedHeight: 200,
+      expandedHeight: 140,
       floating: false,
       pinned: true,
       backgroundColor: const Color(0xFF121212),
@@ -86,9 +91,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
           player.currentSurah?.name ?? '',
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        titlePadding: const EdgeInsets.only(bottom: 16),
+        titlePadding: const EdgeInsets.only(bottom: 14),
         centerTitle: true,
       ),
     );
@@ -97,13 +102,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget _buildNowPlaying(AudioPlayerService player) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         child: Column(
           children: [
-            // Album art placeholder
+            // Album art
             Container(
-              width: 200,
-              height: 200,
+              width: 170,
+              height: 170,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(
@@ -117,20 +122,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1DB954).withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    spreadRadius: 5,
+                    color: const Color(0xFF1DB954).withValues(alpha: 0.35),
+                    blurRadius: 24,
+                    spreadRadius: 6,
                   ),
                 ],
               ),
               child: const Icon(
-                Icons.qr_code_2,
-                size: 100,
+                Icons.menu_book_rounded,
+                size: 80,
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 24),
-            // Surah info
+            const SizedBox(height: 18),
             Text(
               player.currentSurah?.name ?? '',
               style: const TextStyle(
@@ -144,19 +148,41 @@ class _PlayerScreenState extends State<PlayerScreen> {
             Text(
               player.currentQari?.name ?? '',
               style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 16,
+                color: Color(0xFF1DB954),
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              '${player.currentSurah?.nameArabic} • ${player.currentSurah?.verses ?? 0} Ayat',
+              '${player.currentSurah?.nameArabic} • ${player.currentSurah?.verses ?? 0} Ayat • ${player.currentSurah?.revelationType}',
               style: const TextStyle(
                 color: Colors.grey,
-                fontSize: 14,
+                fontSize: 13,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVisualizer(AudioPlayerService player) {
+    String? activeId;
+    for (final b in Backsound.presets) {
+      if (player.isBacksoundActive(b.id)) {
+        activeId = b.id;
+        break;
+      }
+    }
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        child: BacksoundVisualizer(
+          activeBacksoundId: activeId,
+          isPlaying: player.isPlaying,
+          height: 48,
         ),
       ),
     );
@@ -175,11 +201,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 thumbColor: Colors.white,
                 overlayColor: const Color(0xFF1DB954).withValues(alpha: 0.2),
                 trackHeight: 4,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
               ),
               child: Slider(
                 value: player.duration.inSeconds > 0
-                    ? player.position.inSeconds.toDouble()
+                    ? player.position.inSeconds.toDouble().clamp(0.0, player.duration.inSeconds.toDouble())
                     : 0,
                 max: player.duration.inSeconds > 0
                     ? player.duration.inSeconds.toDouble()
@@ -211,16 +237,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget _buildControls(AudioPlayerService player) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             IconButton(
-              icon: const Icon(Icons.shuffle, color: Colors.grey),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: const Icon(Icons.skip_previous, color: Colors.white, size: 36),
+              icon: const Icon(Icons.replay_10, color: Colors.white70, size: 30),
               onPressed: () => player.rewind(),
             ),
             Consumer<AudioPlayerService>(
@@ -228,20 +250,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 return IconButton(
                   icon: Icon(
                     p.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-                    color: Colors.white,
-                    size: 64,
+                    color: const Color(0xFF1DB954),
+                    size: 68,
                   ),
                   onPressed: p.isPlaying ? () => p.pause() : () => p.resume(),
                 );
               },
             ),
             IconButton(
-              icon: const Icon(Icons.skip_next, color: Colors.white, size: 36),
+              icon: const Icon(Icons.forward_10, color: Colors.white70, size: 30),
               onPressed: () => player.fastForward(),
-            ),
-            IconButton(
-              icon: const Icon(Icons.repeat, color: Colors.grey),
-              onPressed: () {},
             ),
           ],
         ),
@@ -252,15 +270,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget _buildBacksoundSection(AudioPlayerService player) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Backsound',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+            const Row(
+              children: [
+                Icon(Icons.spa, color: Color(0xFF1DB954), size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Suara Alam (Backsound Relaksasi)',
+                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -295,7 +319,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             style: TextStyle(
                               color: isActive ? Colors.black : Colors.white,
                               fontSize: 12,
-                              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                             ),
                           ),
                         ],
@@ -311,38 +335,224 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
   }
 
-  Widget _buildLyricsSection(QuranApiService api) {
+  Widget _buildLyricsSection(AudioPlayerService player, QuranApiService api) {
+    final surahNumber = player.currentSurah?.number ?? 1;
+
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Ayat & Terjemahan',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+        padding: const EdgeInsets.all(20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E1E),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFF1DB954).withValues(alpha: 0.2),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: 'Cari ayat...',
-                hintStyle: TextStyle(color: Colors.grey),
-                filled: true,
-                fillColor: Color(0xFF282828),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                  borderSide: BorderSide.none,
-                ),
-                prefixIcon: Icon(Icons.search, color: Colors.grey),
+          ),
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.lyrics, color: Color(0xFF1DB954), size: 22),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Lirik Ayat & Terjemahan',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF282828),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Uthmani & ID',
+                      style: TextStyle(color: Color(0xFF1DB954), fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Fitur ini akan menampilkan teks Arab dan terjemahan per ayat.',
-              style: TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-          ],
+              const SizedBox(height: 14),
+
+              // Search inside lyrics
+              TextField(
+                controller: _searchController,
+                onChanged: (val) => setState(() => _searchAyahQuery = val),
+                decoration: InputDecoration(
+                  hintText: 'Cari ayat atau kata terjemahan...',
+                  hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                  prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 18),
+                  suffixIcon: _searchAyahQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.grey, size: 16),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchAyahQuery = '');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: const Color(0xFF282828),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Ayahs list
+              FutureBuilder<List<Ayah>>(
+                future: api.loadAyahs(surahNumber),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      !api.favoriteSurahNumbers.contains(surahNumber) &&
+                      (snapshot.data == null || snapshot.data!.isEmpty)) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: CircularProgressIndicator(color: Color(0xFF1DB954)),
+                      ),
+                    );
+                  }
+
+                  final ayahs = snapshot.data ?? [];
+                  if (ayahs.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text(
+                          'Memuat ayat Al-Quran...',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final filteredAyahs = ayahs.where((a) {
+                    final q = _searchAyahQuery.toLowerCase();
+                    return a.textArabic.contains(q) ||
+                        a.translation.toLowerCase().contains(q) ||
+                        a.numberInSurah.toString().contains(q);
+                  }).toList();
+
+                  // Estimated active ayah
+                  int activeAyahIndex = 1;
+                  if (player.duration.inSeconds > 0 && ayahs.isNotEmpty) {
+                    final progress = player.position.inMilliseconds / player.duration.inMilliseconds;
+                    activeAyahIndex = (progress * ayahs.length).floor() + 1;
+                    if (activeAyahIndex > ayahs.length) activeAyahIndex = ayahs.length;
+                  }
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: filteredAyahs.length,
+                    separatorBuilder: (_, __) => const Divider(color: Color(0xFF282828), height: 24),
+                    itemBuilder: (context, index) {
+                      final ayah = filteredAyahs[index];
+                      final isCurrentAyah = ayah.numberInSurah == activeAyahIndex && player.isPlaying;
+
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isCurrentAyah
+                              ? const Color(0xFF1DB954).withValues(alpha: 0.12)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: isCurrentAyah
+                              ? Border.all(color: const Color(0xFF1DB954).withValues(alpha: 0.4))
+                              : null,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Header nomor ayat & copy button
+                            Row(
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: isCurrentAyah
+                                        ? const Color(0xFF1DB954)
+                                        : const Color(0xFF282828),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${ayah.numberInSurah}',
+                                      style: TextStyle(
+                                        color: isCurrentAyah ? Colors.black : Colors.white70,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const Spacer(),
+                                IconButton(
+                                  icon: const Icon(Icons.copy, size: 16, color: Colors.grey),
+                                  onPressed: () {
+                                    Clipboard.setData(
+                                      ClipboardData(
+                                        text: '${ayah.textArabic}\n\nArtinya: "${ayah.translation}" (QS. ${player.currentSurah?.name}: ${ayah.numberInSurah})',
+                                      ),
+                                    );
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Ayat ${ayah.numberInSurah} disalin ke clipboard'),
+                                        duration: const Duration(seconds: 1),
+                                        backgroundColor: const Color(0xFF1DB954),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Teks Arab
+                            Text(
+                              ayah.textArabic,
+                              textAlign: TextAlign.right,
+                              textDirection: TextDirection.rtl,
+                              style: TextStyle(
+                                color: isCurrentAyah ? const Color(0xFF1DB954) : Colors.white,
+                                fontSize: 24,
+                                height: 2.0,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Terjemahan Indonesia
+                            Text(
+                              ayah.translation,
+                              textAlign: TextAlign.left,
+                              style: TextStyle(
+                                color: isCurrentAyah ? Colors.white : Colors.white70,
+                                fontSize: 13,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
