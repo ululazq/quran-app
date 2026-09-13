@@ -19,6 +19,8 @@ workflows:
           bundle install
       - name: Build Android APK
         script: |
+          # Remove iOS folder to prevent iOS build attempts
+          rm -rf ios
           flutter packages pub get
           flutter build apk --release --no-tree-shake-icons
     artifacts:
