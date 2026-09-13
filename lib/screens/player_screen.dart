@@ -8,6 +8,7 @@ import '../services/quran_api_service.dart';
 import '../models/backsound_model.dart';
 import '../models/ayah_model.dart';
 import '../widgets/backsound_visualizer.dart';
+import '../theme/app_theme.dart';
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
@@ -45,10 +46,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.bgPrimary,
       body: Consumer2<AudioPlayerService, QuranApiService>(
         builder: (context, player, api, _) {
           if (player.currentSurah == null) {
-            return const Center(child: Text('Tidak ada audio yang diputar'));
+            return const Center(
+              child: Text('Tidak ada audio yang diputar', style: TextStyle(color: AppTheme.textSecondary)),
+            );
           }
 
           return CustomScrollView(
@@ -60,7 +64,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               _buildControls(player),
               _buildBacksoundSection(player),
               _buildLyricsSection(player, api),
-              const SliverToBoxAdapter(child: SizedBox(height: 48)),
+              const SliverToBoxAdapter(child: SizedBox(height: 56)),
             ],
           );
         },
@@ -70,30 +74,49 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Widget _buildAppBar(AudioPlayerService player, QuranApiService api) {
     return SliverAppBar(
-      expandedHeight: 140,
+      expandedHeight: 90,
       floating: false,
       pinned: true,
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: AppTheme.bgPrimary,
       leading: IconButton(
-        icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 32),
+        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.textPrimary, size: 34),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
         if (player.currentSurah != null)
           IconButton(
             icon: Icon(
-              api.isFavorite(player.currentSurah!.number) ? Icons.favorite : Icons.favorite_border,
-              color: api.isFavorite(player.currentSurah!.number) ? Colors.red : Colors.white,
+              api.isFavorite(player.currentSurah!.number) ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              color: api.isFavorite(player.currentSurah!.number) ? Colors.redAccent : AppTheme.textSecondary,
+              size: 26,
             ),
             onPressed: () => api.toggleFavorite(player.currentSurah!.number),
           ),
       ],
       flexibleSpace: FlexibleSpaceBar(
-        title: Text(
-          player.currentSurah?.name ?? '',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'MEMUTAR SURAH',
+              style: TextStyle(
+                color: AppTheme.primaryEmerald,
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+                letterSpacing: 1.5,
+              ),
+            ),
+            Text(
+              player.currentSurah?.name ?? '',
+              style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
         ),
-        titlePadding: const EdgeInsets.only(bottom: 14),
+        titlePadding: const EdgeInsets.only(bottom: 12),
         centerTitle: true,
       ),
     );
@@ -102,63 +125,112 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget _buildNowPlaying(AudioPlayerService player) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
         child: Column(
           children: [
-            // Album art
+            // Album art with glowing emerald gradient & star emblem
             Container(
               width: 170,
               height: 170,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1DB954),
-                    Color(0xFF1AA34A),
-                    Color(0xFF15803D),
-                  ],
-                ),
+                gradient: AppTheme.emeraldGradient,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1DB954).withValues(alpha: 0.35),
-                    blurRadius: 24,
-                    spreadRadius: 6,
+                    color: AppTheme.primaryEmerald.withValues(alpha: 0.35),
+                    blurRadius: 28,
+                    spreadRadius: 4,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+                border: Border.all(
+                  color: AppTheme.primaryEmeraldLight.withValues(alpha: 0.6),
+                  width: 3,
+                ),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.auto_stories_rounded,
+                    size: 72,
+                    color: Colors.black,
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.menu_book_rounded,
-                size: 80,
-                color: Colors.white,
-              ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
+
+            // Surah Name (English)
             Text(
               player.currentSurah?.name ?? '',
               style: const TextStyle(
-                color: Colors.white,
+                color: AppTheme.textPrimary,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
+                letterSpacing: -0.3,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
+
+            // Arabic Name
             Text(
-              player.currentQari?.name ?? '',
+              player.currentSurah?.nameArabic ?? '',
+              textDirection: TextDirection.rtl,
               style: const TextStyle(
-                color: Color(0xFF1DB954),
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
+                color: AppTheme.accentGoldLight,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              '${player.currentSurah?.nameArabic} • ${player.currentSurah?.verses ?? 0} Ayat • ${player.currentSurah?.revelationType}',
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 13,
+            const SizedBox(height: 6),
+
+            // Qari Name with verified checkmark
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.mic_rounded, color: AppTheme.primaryEmerald, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  player.currentQari?.name ?? 'Qari',
+                  style: const TextStyle(
+                    color: AppTheme.primaryEmeraldLight,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+
+            // Revelation tag & Verses
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.bgSurface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.divider, width: 1),
+              ),
+              child: Text(
+                '${player.currentSurah?.revelationType.toUpperCase()} • ${player.currentSurah?.verses ?? 0} AYAT',
+                style: const TextStyle(
+                  color: AppTheme.textTertiary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ],
@@ -178,11 +250,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
         child: BacksoundVisualizer(
           activeBacksoundId: activeId,
           isPlaying: player.isPlaying,
-          height: 48,
+          height: 46,
         ),
       ),
     );
@@ -191,17 +263,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget _buildProgressBar(AudioPlayerService player) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
         child: Column(
           children: [
             SliderTheme(
               data: SliderThemeData(
-                activeTrackColor: const Color(0xFF1DB954),
-                inactiveTrackColor: Colors.grey[800],
+                activeTrackColor: AppTheme.primaryEmerald,
+                inactiveTrackColor: AppTheme.bgElevated,
                 thumbColor: Colors.white,
-                overlayColor: const Color(0xFF1DB954).withValues(alpha: 0.2),
+                overlayColor: AppTheme.primaryEmerald.withValues(alpha: 0.2),
                 trackHeight: 4,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
               ),
               child: Slider(
                 value: player.duration.inSeconds > 0
@@ -215,18 +287,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 },
               ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _formatDuration(player.position),
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-                Text(
-                  _formatDuration(player.duration),
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _formatDuration(player.position),
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    _formatDuration(player.duration),
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -237,67 +312,95 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget _buildControls(AudioPlayerService player) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
         child: Column(
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.skip_previous_rounded, color: Colors.white, size: 36),
+                  icon: const Icon(Icons.skip_previous_rounded, color: AppTheme.textPrimary, size: 34),
                   tooltip: 'Surah Sebelumnya',
                   onPressed: () => player.playPrevious(),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.replay_10, color: Colors.white70, size: 28),
+                  icon: const Icon(Icons.replay_10_rounded, color: AppTheme.textSecondary, size: 28),
                   tooltip: 'Mundur 10 detik',
                   onPressed: () => player.rewind(),
                 ),
                 Consumer<AudioPlayerService>(
                   builder: (context, p, _) {
-                    return IconButton(
-                      icon: Icon(
-                        p.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-                        color: const Color(0xFF1DB954),
-                        size: 68,
+                    return Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryEmerald.withValues(alpha: 0.35),
+                            blurRadius: 18,
+                            spreadRadius: 2,
+                          ),
+                        ],
                       ),
-                      onPressed: p.isPlaying ? () => p.pause() : () => p.resume(),
+                      child: IconButton(
+                        icon: Icon(
+                          p.isPlaying
+                              ? Icons.pause_circle_filled_rounded
+                              : Icons.play_circle_filled_rounded,
+                          color: AppTheme.primaryEmerald,
+                          size: 68,
+                        ),
+                        onPressed: p.isPlaying ? () => p.pause() : () => p.resume(),
+                      ),
                     );
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.forward_10, color: Colors.white70, size: 28),
+                  icon: const Icon(Icons.forward_10_rounded, color: AppTheme.textSecondary, size: 28),
                   tooltip: 'Maju 10 detik',
                   onPressed: () => player.fastForward(),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 36),
+                  icon: const Icon(Icons.skip_next_rounded, color: AppTheme.textPrimary, size: 34),
                   tooltip: 'Surah Selanjutnya',
                   onPressed: () => player.playNext(),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
+
+            // Auto-play next pill button
             InkWell(
               onTap: () => player.toggleAutoPlayNext(),
               borderRadius: BorderRadius.circular(16),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: player.autoPlayNext
+                      ? AppTheme.primaryEmerald.withValues(alpha: 0.15)
+                      : AppTheme.bgSurface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: player.autoPlayNext
+                        ? AppTheme.primaryEmerald
+                        : AppTheme.divider,
+                    width: 1,
+                  ),
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      player.autoPlayNext ? Icons.autorenew : Icons.repeat_one,
+                      player.autoPlayNext ? Icons.autorenew_rounded : Icons.repeat_one_rounded,
                       size: 16,
-                      color: player.autoPlayNext ? const Color(0xFF1DB954) : Colors.grey,
+                      color: player.autoPlayNext ? AppTheme.primaryEmerald : AppTheme.textTertiary,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       player.autoPlayNext ? 'Auto-play Next: Aktif' : 'Auto-play Next: Nonaktif',
                       style: TextStyle(
                         fontSize: 12,
-                        color: player.autoPlayNext ? const Color(0xFF1DB954) : Colors.grey,
-                        fontWeight: FontWeight.w500,
+                        color: player.autoPlayNext ? AppTheme.primaryEmerald : AppTheme.textSecondary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -313,17 +416,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget _buildBacksoundSection(AudioPlayerService player) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Row(
               children: [
-                Icon(Icons.spa, color: Color(0xFF1DB954), size: 18),
+                Icon(Icons.spa_rounded, color: AppTheme.primaryEmerald, size: 18),
                 SizedBox(width: 8),
                 Text(
-                  'Suara Alam (Backsound Relaksasi)',
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                  'Backsound Relaksasi Suara Alam',
+                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -334,13 +437,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
               children: Backsound.presets.map((backsound) {
                 final isActive = player.isBacksoundActive(backsound.id);
                 final isLoading = player.isBacksoundLoading(backsound.id);
+
                 return Material(
-                  color: isActive ? const Color(0xFF1DB954) : const Color(0xFF282828),
+                  color: isActive ? AppTheme.primaryEmerald : AppTheme.bgCard,
                   borderRadius: BorderRadius.circular(20),
                   child: InkWell(
                     onTap: () => player.toggleBacksound(backsound),
                     borderRadius: BorderRadius.circular(20),
-                    child: Padding(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isActive ? AppTheme.primaryEmeraldLight : AppTheme.divider,
+                          width: 1,
+                        ),
+                      ),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -355,14 +466,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               ),
                             )
                           else
-                            Icon(backsound.icon, size: 16, color: isActive ? Colors.black : Colors.white),
+                            Icon(backsound.icon, size: 16, color: isActive ? Colors.black : AppTheme.textPrimary),
                           const SizedBox(width: 6),
                           Text(
                             backsound.name,
                             style: TextStyle(
-                              color: isActive ? Colors.black : Colors.white,
+                              color: isActive ? Colors.black : AppTheme.textPrimary,
                               fontSize: 12,
-                              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
                             ),
                           ),
                         ],
@@ -383,28 +494,29 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E),
+            color: AppTheme.bgCard,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: const Color(0xFF1DB954).withValues(alpha: 0.2),
+              color: AppTheme.primaryEmerald.withValues(alpha: 0.25),
+              width: 1,
             ),
           ),
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.lyrics, color: Color(0xFF1DB954), size: 22),
+                  const Icon(Icons.lyrics_rounded, color: AppTheme.primaryEmerald, size: 22),
                   const SizedBox(width: 8),
                   const Text(
                     'Lirik Ayat & Terjemahan',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
+                      color: AppTheme.textPrimary,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -412,29 +524,30 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF282828),
+                      color: AppTheme.bgElevated,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(
                       'Uthmani & ID',
-                      style: TextStyle(color: Color(0xFF1DB954), fontSize: 11, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: AppTheme.primaryEmerald, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 14),
 
-              // Search inside lyrics
+              // Search field
               TextField(
                 controller: _searchController,
                 onChanged: (val) => setState(() => _searchAyahQuery = val),
+                style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Cari ayat atau kata terjemahan...',
-                  hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 18),
+                  hintStyle: const TextStyle(color: AppTheme.textTertiary, fontSize: 12),
+                  prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryEmerald, size: 18),
                   suffixIcon: _searchAyahQuery.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear, color: Colors.grey, size: 16),
+                          icon: const Icon(Icons.clear_rounded, color: AppTheme.textTertiary, size: 16),
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _searchAyahQuery = '');
@@ -442,11 +555,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         )
                       : null,
                   filled: true,
-                  fillColor: const Color(0xFF282828),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                  fillColor: AppTheme.bgSurface,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.divider, width: 1),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.divider, width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.primaryEmerald, width: 1.5),
                   ),
                 ),
               ),
@@ -461,8 +582,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       (snapshot.data == null || snapshot.data!.isEmpty)) {
                     return const Center(
                       child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: CircularProgressIndicator(color: Color(0xFF1DB954)),
+                        padding: EdgeInsets.all(28),
+                        child: CircularProgressIndicator(color: AppTheme.primaryEmerald),
                       ),
                     );
                   }
@@ -471,10 +592,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   if (ayahs.isEmpty) {
                     return const Center(
                       child: Padding(
-                        padding: EdgeInsets.all(24),
+                        padding: EdgeInsets.all(28),
                         child: Text(
                           'Memuat ayat Al-Quran...',
-                          style: TextStyle(color: Colors.grey),
+                          style: TextStyle(color: AppTheme.textTertiary),
                         ),
                       ),
                     );
@@ -487,7 +608,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         a.numberInSurah.toString().contains(q);
                   }).toList();
 
-                  // Estimated active ayah
+                  // Estimated active ayah index based on position
                   int activeAyahIndex = 1;
                   if (player.duration.inSeconds > 0 && ayahs.isNotEmpty) {
                     final progress = player.position.inMilliseconds / player.duration.inMilliseconds;
@@ -499,7 +620,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: filteredAyahs.length,
-                    separatorBuilder: (_, __) => const Divider(color: Color(0xFF282828), height: 24),
+                    separatorBuilder: (_, __) => const Divider(color: AppTheme.divider, height: 24),
                     itemBuilder: (context, index) {
                       final ayah = filteredAyahs[index];
                       final isCurrentAyah = ayah.numberInSurah == activeAyahIndex && player.isPlaying;
@@ -508,11 +629,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: isCurrentAyah
-                              ? const Color(0xFF1DB954).withValues(alpha: 0.12)
+                              ? AppTheme.primaryEmerald.withValues(alpha: 0.12)
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           border: isCurrentAyah
-                              ? Border.all(color: const Color(0xFF1DB954).withValues(alpha: 0.4))
+                              ? Border.all(color: AppTheme.primaryEmerald.withValues(alpha: 0.45), width: 1.5)
                               : null,
                         ),
                         child: Column(
@@ -526,15 +647,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                   height: 28,
                                   decoration: BoxDecoration(
                                     color: isCurrentAyah
-                                        ? const Color(0xFF1DB954)
-                                        : const Color(0xFF282828),
+                                        ? AppTheme.primaryEmerald
+                                        : AppTheme.bgElevated,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Center(
                                     child: Text(
                                       '${ayah.numberInSurah}',
                                       style: TextStyle(
-                                        color: isCurrentAyah ? Colors.black : Colors.white70,
+                                        color: isCurrentAyah ? Colors.black : AppTheme.accentGoldLight,
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -543,7 +664,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                 ),
                                 const Spacer(),
                                 IconButton(
-                                  icon: const Icon(Icons.copy, size: 16, color: Colors.grey),
+                                  icon: const Icon(Icons.copy_rounded, size: 16, color: AppTheme.textTertiary),
+                                  tooltip: 'Salin Ayat',
                                   onPressed: () {
                                     Clipboard.setData(
                                       ClipboardData(
@@ -554,7 +676,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                       SnackBar(
                                         content: Text('Ayat ${ayah.numberInSurah} disalin ke clipboard'),
                                         duration: const Duration(seconds: 1),
-                                        backgroundColor: const Color(0xFF1DB954),
+                                        backgroundColor: AppTheme.primaryEmerald,
                                       ),
                                     );
                                   },
@@ -563,26 +685,26 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             ),
                             const SizedBox(height: 8),
 
-                            // Teks Arab
+                            // Teks Arab Uthmani
                             Text(
                               ayah.textArabic,
                               textAlign: TextAlign.right,
                               textDirection: TextDirection.rtl,
                               style: TextStyle(
-                                color: isCurrentAyah ? const Color(0xFF1DB954) : Colors.white,
+                                color: isCurrentAyah ? AppTheme.primaryEmeraldLight : AppTheme.textPrimary,
                                 fontSize: 24,
-                                height: 2.0,
+                                height: 2.1,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             const SizedBox(height: 10),
 
-                            // Terjemahan Indonesia
+                            // Terjemahan Bahasa Indonesia
                             Text(
                               ayah.translation,
                               textAlign: TextAlign.left,
                               style: TextStyle(
-                                color: isCurrentAyah ? Colors.white : Colors.white70,
+                                color: isCurrentAyah ? AppTheme.textPrimary : AppTheme.textSecondary,
                                 fontSize: 13,
                                 height: 1.5,
                               ),

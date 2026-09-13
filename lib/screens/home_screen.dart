@@ -5,6 +5,7 @@ import '../services/quran_api_service.dart';
 import '../services/audio_player_service.dart';
 import '../models/backsound_model.dart';
 import '../models/qari_model.dart';
+import '../theme/app_theme.dart';
 import '../widgets/surah_card.dart';
 import '../widgets/qari_card.dart';
 import '../widgets/mini_player.dart';
@@ -49,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.bgPrimary,
       body: SafeArea(
         child: Column(
           children: [
@@ -95,22 +97,57 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildHeader() {
-    String title = 'Quran App';
-    if (_selectedBottomNavIndex == 1) title = 'Surah Favorit';
-    if (_selectedBottomNavIndex == 2) title = 'Pengaturan';
+    String title = 'Al-Quran Digital';
+    String subtitle = 'Dengarkan tilawah & backsound relaksasi alam';
+    if (_selectedBottomNavIndex == 1) {
+      title = 'Surah Favorit';
+      subtitle = 'Daftar surah yang sering kamu dengarkan';
+    }
+    if (_selectedBottomNavIndex == 2) {
+      title = 'Pengaturan';
+      subtitle = 'Kualitas audio, sleep timer & preferensi';
+    }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
       child: Row(
         children: [
-          const Icon(Icons.auto_stories, size: 28, color: Color(0xFF1DB954)),
-          const SizedBox(width: 10),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: AppTheme.emeraldGradient,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryEmerald.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: const Icon(Icons.auto_stories_rounded, size: 22, color: Colors.black),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -120,39 +157,97 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildTabBar() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFF282828),
-        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.bgSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.divider, width: 1),
       ),
       child: TabBar(
         controller: _tabController,
-        indicator: const BoxDecoration(
-          color: Color(0xFF1DB954),
-          borderRadius: BorderRadius.all(Radius.circular(12)),
+        indicator: BoxDecoration(
+          gradient: AppTheme.emeraldGradient,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryEmerald.withValues(alpha: 0.25),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
         labelColor: Colors.black,
-        unselectedLabelColor: Colors.white70,
+        unselectedLabelColor: AppTheme.textSecondary,
         labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
         tabs: const [
-          Tab(text: 'Surah', icon: Icon(Icons.menu_book, size: 18)),
-          Tab(text: 'Qari', icon: Icon(Icons.person, size: 18)),
-          Tab(text: 'Backsound', icon: Icon(Icons.music_note, size: 18)),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.menu_book_rounded, size: 16),
+                SizedBox(width: 6),
+                Text('Surah'),
+              ],
+            ),
+          ),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.person_rounded, size: 16),
+                SizedBox(width: 6),
+                Text('Qari'),
+              ],
+            ),
+          ),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.spa_rounded, size: 16),
+                SizedBox(width: 6),
+                Text('Suara Alam'),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: _selectedBottomNavIndex,
-      onTap: (index) => setState(() => _selectedBottomNavIndex = index),
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Beranda'),
-        BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Favorit'),
-        BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Pengaturan'),
-      ],
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.bgSurface,
+        border: Border(top: BorderSide(color: AppTheme.divider, width: 1)),
+      ),
+      child: BottomNavigationBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        currentIndex: _selectedBottomNavIndex,
+        onTap: (index) => setState(() => _selectedBottomNavIndex = index),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_rounded),
+            activeIcon: Icon(Icons.home_filled),
+            label: 'Beranda',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite_border_rounded),
+            activeIcon: Icon(Icons.favorite_rounded),
+            label: 'Favorit',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings_outlined),
+            activeIcon: Icon(Icons.settings_rounded),
+            label: 'Pengaturan',
+          ),
+        ],
+      ),
     );
   }
 }
@@ -167,6 +262,7 @@ class _SurahListView extends StatefulWidget {
 class _SurahListViewState extends State<_SurahListView> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String _selectedFilter = 'Semua';
 
   @override
   void dispose() {
@@ -178,47 +274,76 @@ class _SurahListViewState extends State<_SurahListView> {
   Widget build(BuildContext context) {
     return Consumer2<QuranApiService, AudioPlayerService>(
       builder: (context, api, player, _) {
-        if (api.isLoading) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFF1DB954)));
+        if (api.isLoading && api.surahs.isEmpty) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppTheme.primaryEmerald),
+          );
         }
 
         if (api.error != null && api.surahs.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(api.error!, style: const TextStyle(color: Colors.red)),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => api.loadSurahs(),
-                  child: const Text('Coba Lagi'),
-                ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.wifi_off_rounded, color: Colors.amber, size: 48),
+                  const SizedBox(height: 12),
+                  Text(api.error!, style: const TextStyle(color: Colors.red, fontSize: 13), textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryEmerald,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => api.loadSurahs(),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Coba Lagi', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
             ),
           );
         }
 
+        // Filter surahs
         final filteredSurahs = api.surahs.where((s) {
           final query = _searchQuery.toLowerCase();
-          return s.name.toLowerCase().contains(query) ||
+          final matchesQuery = s.name.toLowerCase().contains(query) ||
               s.number.toString().contains(query) ||
               s.nameArabic.contains(query);
+
+          if (!matchesQuery) return false;
+
+          if (_selectedFilter == 'Makkiyah') {
+            return s.revelationType.toLowerCase().contains('meccan') ||
+                s.revelationType.toLowerCase().contains('makki');
+          } else if (_selectedFilter == 'Madaniyah') {
+            return s.revelationType.toLowerCase().contains('medinan') ||
+                s.revelationType.toLowerCase().contains('madani');
+          } else if (_selectedFilter == 'Juz \'Amma') {
+            return s.number >= 78;
+          }
+          return true;
         }).toList();
 
         return Column(
           children: [
+            // Search Input
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: TextField(
                 controller: _searchController,
                 onChanged: (val) => setState(() => _searchQuery = val),
+                style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Cari Surah (cth: Yasin, Al-Mulk, 36)...',
-                  hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
+                  hintStyle: const TextStyle(color: AppTheme.textTertiary, fontSize: 13),
+                  prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryEmerald, size: 20),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear, color: Colors.grey, size: 18),
+                          icon: const Icon(Icons.clear_rounded, color: AppTheme.textTertiary, size: 18),
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _searchQuery = '');
@@ -226,22 +351,68 @@ class _SurahListViewState extends State<_SurahListView> {
                         )
                       : null,
                   filled: true,
-                  fillColor: const Color(0xFF282828),
+                  fillColor: AppTheme.bgSurface,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppTheme.divider, width: 1),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppTheme.divider, width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppTheme.primaryEmerald, width: 1.5),
                   ),
                 ),
               ),
             ),
+
+            // Category Chips (Semua, Makkiyah, Madaniyah, Juz Amma)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: ['Semua', 'Makkiyah', 'Madaniyah', 'Juz \'Amma'].map((filter) {
+                  final isSelected = _selectedFilter == filter;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8, bottom: 8),
+                    child: ChoiceChip(
+                      label: Text(filter),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() => _selectedFilter = filter);
+                        }
+                      },
+                      selectedColor: AppTheme.primaryEmerald,
+                      backgroundColor: AppTheme.bgSurface,
+                      labelStyle: TextStyle(
+                        color: isSelected ? Colors.black : AppTheme.textSecondary,
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      side: BorderSide(
+                        color: isSelected ? AppTheme.primaryEmerald : AppTheme.divider,
+                        width: 1,
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      showCheckmark: false,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+
+            // Surahs List
             Expanded(
               child: filteredSurahs.isEmpty
                   ? const Center(
-                      child: Text('Surah tidak ditemukan', style: TextStyle(color: Colors.grey)),
+                      child: Text('Surah tidak ditemukan', style: TextStyle(color: AppTheme.textTertiary)),
                     )
                   : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       itemCount: filteredSurahs.length,
                       itemBuilder: (context, index) {
                         final surah = filteredSurahs[index];
@@ -291,7 +462,7 @@ class _QariListViewState extends State<_QariListView> {
     return Consumer2<QuranApiService, AudioPlayerService>(
       builder: (context, api, player, _) {
         if (api.isLoading && api.qaris.isEmpty) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFF1DB954)));
+          return const Center(child: CircularProgressIndicator(color: AppTheme.primaryEmerald));
         }
 
         final activeQari = player.currentQari ?? api.currentQari;
@@ -303,17 +474,18 @@ class _QariListViewState extends State<_QariListView> {
         return Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: TextField(
                 controller: _searchController,
                 onChanged: (val) => setState(() => _searchQuery = val),
+                style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Cari Qari (cth: Mishary, Sudais, Ghamdi)...',
-                  hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
+                  hintStyle: const TextStyle(color: AppTheme.textTertiary, fontSize: 13),
+                  prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryEmerald, size: 20),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear, color: Colors.grey, size: 18),
+                          icon: const Icon(Icons.clear_rounded, color: AppTheme.textTertiary, size: 18),
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _searchQuery = '');
@@ -321,11 +493,19 @@ class _QariListViewState extends State<_QariListView> {
                         )
                       : null,
                   filled: true,
-                  fillColor: const Color(0xFF282828),
+                  fillColor: AppTheme.bgSurface,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppTheme.divider, width: 1),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppTheme.divider, width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppTheme.primaryEmerald, width: 1.5),
                   ),
                 ),
               ),
@@ -333,15 +513,15 @@ class _QariListViewState extends State<_QariListView> {
             Expanded(
               child: filteredQaris.isEmpty
                   ? const Center(
-                      child: Text('Qari tidak ditemukan', style: TextStyle(color: Colors.grey)),
+                      child: Text('Qari tidak ditemukan', style: TextStyle(color: AppTheme.textTertiary)),
                     )
                   : GridView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
-                        childAspectRatio: 1.4,
+                        childAspectRatio: 1.18,
                       ),
                       itemCount: filteredQaris.length,
                       itemBuilder: (context, index) {
@@ -357,8 +537,8 @@ class _QariListViewState extends State<_QariListView> {
                             }
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Qari aktif: ${qari.name}'),
-                                backgroundColor: const Color(0xFF1DB954),
+                                content: Text('Qari aktif diubah: ${qari.name}'),
+                                backgroundColor: AppTheme.primaryEmerald,
                                 duration: const Duration(seconds: 1),
                               ),
                             );
@@ -381,25 +561,68 @@ class _BacksoundView extends StatelessWidget {
   Widget build(BuildContext context) {
     final backsounds = Backsound.presets;
 
-    return GridView.builder(
+    return ListView(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.25,
-      ),
-      itemCount: backsounds.length,
-      itemBuilder: (context, index) {
-        final backsound = backsounds[index];
-        return BacksoundCard(
-          backsound: backsound,
-          onTap: () {
-            final player = context.read<AudioPlayerService>();
-            player.toggleBacksound(backsound);
+      children: [
+        // Intro Banner
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: AppTheme.heroGradient,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.primaryEmerald.withValues(alpha: 0.3), width: 1),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.spa_rounded, color: AppTheme.primaryEmeraldLight, size: 28),
+              SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Suara Alam Relaksasi',
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Dengarkan tilawah berpadu suara hujan, ombak, angin, atau burung untuk ketenangan hati.',
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.15,
+          ),
+          itemCount: backsounds.length,
+          itemBuilder: (context, index) {
+            final backsound = backsounds[index];
+            return BacksoundCard(
+              backsound: backsound,
+              onTap: () {
+                final player = context.read<AudioPlayerService>();
+                player.toggleBacksound(backsound);
+              },
+            );
           },
-        );
-      },
+        ),
+      ],
     );
   }
 }
@@ -416,75 +639,120 @@ class BacksoundCard extends StatelessWidget {
     final isActive = player.isBacksoundActive(backsound.id);
     final isLoading = player.isBacksoundLoading(backsound.id);
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF1DB954) : const Color(0xFF282828),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isActive ? const Color(0xFF1DB954) : Colors.transparent,
-            width: 1.5,
-          ),
+    Color themeColor = AppTheme.primaryEmerald;
+    if (backsound.id == 'rain') themeColor = const Color(0xFF38BDF8);
+    if (backsound.id == 'ocean') themeColor = const Color(0xFF0284C7);
+    if (backsound.id == 'wind') themeColor = const Color(0xFF2DD4BF);
+    if (backsound.id == 'birds') themeColor = const Color(0xFF84CC16);
+    if (backsound.id == 'night') themeColor = const Color(0xFF818CF8);
+    if (backsound.id == 'fireplace') themeColor = const Color(0xFFF97316);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isActive
+            ? themeColor.withValues(alpha: 0.15)
+            : AppTheme.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isActive ? themeColor : AppTheme.divider.withValues(alpha: 0.6),
+          width: isActive ? 1.5 : 1,
         ),
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (isLoading)
-              const SizedBox(
-                width: 32,
-                height: 32,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: Colors.white,
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: themeColor.withValues(alpha: 0.25),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
-              )
-            else
-              Icon(
-                backsound.icon,
-                size: 36,
-                color: isActive ? Colors.black : Colors.white,
-              ),
-            const SizedBox(height: 8),
-            Text(
-              backsound.name,
-              style: TextStyle(
-                color: isActive ? Colors.black : Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            Text(
-              backsound.nameAr,
-              style: TextStyle(
-                color: isActive ? Colors.black87 : Colors.white70,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Row(
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  isActive ? Icons.volume_up : Icons.volume_mute,
-                  size: 14,
-                  color: isActive ? Colors.black : Colors.grey,
-                ),
-                const SizedBox(width: 4),
+                if (isLoading)
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: themeColor,
+                    ),
+                  )
+                else
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: isActive ? themeColor : AppTheme.bgElevated,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      backsound.icon,
+                      size: 24,
+                      color: isActive ? Colors.black : Colors.white,
+                    ),
+                  ),
+                const SizedBox(height: 8),
                 Text(
-                  isActive ? 'Aktif' : 'Mati',
+                  backsound.name,
                   style: TextStyle(
+                    color: isActive ? themeColor : AppTheme.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                Text(
+                  backsound.nameAr,
+                  style: TextStyle(
+                    color: isActive ? themeColor.withValues(alpha: 0.8) : AppTheme.textTertiary,
                     fontSize: 11,
-                    color: isActive ? Colors.black : Colors.grey,
-                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isActive ? themeColor.withValues(alpha: 0.2) : AppTheme.bgElevated,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isActive ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                        size: 12,
+                        color: isActive ? themeColor : AppTheme.textTertiary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isActive ? 'Memutar' : 'Mati',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isActive ? themeColor : AppTheme.textTertiary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -507,17 +775,26 @@ class _FavoritesView extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.favorite_border, size: 72, color: Colors.grey[700]),
-                  const SizedBox(height: 16),
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgSurface,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppTheme.divider, width: 1),
+                    ),
+                    child: const Icon(Icons.favorite_border_rounded, size: 40, color: AppTheme.textTertiary),
+                  ),
+                  const SizedBox(height: 18),
                   const Text(
                     'Belum Ada Surah Favorit',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Tandai surah favorit kamu dengan menekan icon hati di halaman pemutar audio untuk akses cepat.',
+                    'Tandai surah yang kamu sukai dengan menekan icon hati pada halaman pemutar audio untuk akses instan.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
                   ),
                 ],
               ),
@@ -576,8 +853,8 @@ class _SettingsViewState extends State<_SettingsView> {
           setState(() => _sleepTimerMinutes = 0);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Sleep Timer: Audio telah dihentikan otomatis.'),
-              backgroundColor: Color(0xFF1DB954),
+              content: Text('Sleep Timer: Audio telah berhenti otomatis.'),
+              backgroundColor: AppTheme.primaryEmerald,
             ),
           );
         }
@@ -585,7 +862,7 @@ class _SettingsViewState extends State<_SettingsView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Sleep Timer aktif: Audio akan berhenti dalam $minutes menit.'),
-          backgroundColor: const Color(0xFF1DB954),
+          backgroundColor: AppTheme.primaryEmerald,
         ),
       );
     } else {
@@ -602,8 +879,9 @@ class _SettingsViewState extends State<_SettingsView> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('Kualitas Audio', style: TextStyle(color: Colors.white, fontSize: 18)),
+        backgroundColor: AppTheme.bgCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Kualitas Streaming Audio', style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -612,10 +890,10 @@ class _SettingsViewState extends State<_SettingsView> {
             'Kualitas Tinggi (192 kbps)',
           ].map((quality) {
             return RadioListTile<String>(
-              title: Text(quality, style: const TextStyle(color: Colors.white, fontSize: 14)),
+              title: Text(quality, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
               value: quality,
               groupValue: _selectedQuality,
-              activeColor: const Color(0xFF1DB954),
+              activeColor: AppTheme.primaryEmerald,
               onChanged: (val) {
                 if (val != null) {
                   setState(() => _selectedQuality = val);
@@ -623,7 +901,7 @@ class _SettingsViewState extends State<_SettingsView> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Kualitas audio diubah ke $val'),
-                      backgroundColor: const Color(0xFF1DB954),
+                      backgroundColor: AppTheme.primaryEmerald,
                     ),
                   );
                 }
@@ -639,12 +917,13 @@ class _SettingsViewState extends State<_SettingsView> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: AppTheme.bgCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.timer, color: Color(0xFF1DB954)),
+            Icon(Icons.timer_rounded, color: AppTheme.primaryEmerald),
             SizedBox(width: 8),
-            Text('Sleep Timer (Mati Otomatis)', style: TextStyle(color: Colors.white, fontSize: 16)),
+            Text('Sleep Timer (Mati Otomatis)', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -659,11 +938,11 @@ class _SettingsViewState extends State<_SettingsView> {
             return ListTile(
               leading: Icon(
                 _sleepTimerMinutes == mins ? Icons.radio_button_checked : Icons.radio_button_off,
-                color: _sleepTimerMinutes == mins ? const Color(0xFF1DB954) : Colors.grey,
+                color: _sleepTimerMinutes == mins ? AppTheme.primaryEmerald : Colors.grey,
               ),
               title: Text(
                 mins == 0 ? 'Matikan Timer' : '$mins Menit',
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
               ),
               onTap: () {
                 Navigator.pop(ctx);
@@ -680,7 +959,7 @@ class _SettingsViewState extends State<_SettingsView> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Cache data ayat dan audio sementara berhasil dibersihkan!'),
-        backgroundColor: Color(0xFF1DB954),
+        backgroundColor: AppTheme.primaryEmerald,
         duration: Duration(seconds: 2),
       ),
     );
@@ -690,12 +969,13 @@ class _SettingsViewState extends State<_SettingsView> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: AppTheme.bgCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Row(
           children: [
-            Icon(Icons.auto_stories, color: Color(0xFF1DB954)),
+            Icon(Icons.auto_stories_rounded, color: AppTheme.primaryEmerald),
             SizedBox(width: 10),
-            Text('Tentang Quran App', style: TextStyle(color: Colors.white, fontSize: 18)),
+            Text('Tentang Quran App', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
         content: const Column(
@@ -704,24 +984,24 @@ class _SettingsViewState extends State<_SettingsView> {
           children: [
             Text(
               'Aplikasi Al-Quran Digital Modern',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+              style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
             ),
             SizedBox(height: 8),
             Text(
               'Dilengkapi dengan tilawah dari Qari internasional terbaik, pemutar audio background tanpa henti, lirik ayat per ayat bahasa Indonesia, serta backsound relaksasi suara alam (hujan, ombak, angin, kicau burung, suasana malam, dan perapian).',
-              style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.5),
             ),
             SizedBox(height: 12),
             Text(
-              'Sumber API: MP3Quran.net & AlQuran.cloud\nVersi: 1.0.0 Stable',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
+              'Sumber API: MP3Quran.net & AlQuran.cloud\nVersi: 1.0.0 Stable Pro Max',
+              style: TextStyle(color: AppTheme.textTertiary, fontSize: 12),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tutup', style: TextStyle(color: Color(0xFF1DB954))),
+            child: const Text('Tutup', style: TextStyle(color: AppTheme.primaryEmerald, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -739,104 +1019,106 @@ class _SettingsViewState extends State<_SettingsView> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // App Info Card
-        Card(
-          color: const Color(0xFF1E1E1E),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: const Padding(
-            padding: EdgeInsets.all(16),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: Color(0xFF1DB954),
-                  radius: 28,
-                  child: Icon(Icons.auto_stories, color: Colors.black, size: 28),
-                ),
-                SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Quran App',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+        // App Info Header Card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: AppTheme.cardGradient,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.divider, width: 1),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.emeraldGradient,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryEmerald.withValues(alpha: 0.3),
+                      blurRadius: 10,
                     ),
-                    SizedBox(height: 2),
-                    Text('Versi 1.0.0 (Release Build)', style: TextStyle(color: Colors.grey, fontSize: 12)),
                   ],
                 ),
-              ],
-            ),
+                child: const Center(
+                  child: Icon(Icons.auto_stories_rounded, color: Colors.black, size: 28),
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Quran App Pro Max',
+                    style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 2),
+                  Text('Versi 1.0.0 (Release Stable)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                ],
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 20),
 
         const Text(
-          'Pengaturan Pemutaran & Audio',
-          style: TextStyle(color: Color(0xFF1DB954), fontSize: 13, fontWeight: FontWeight.bold),
+          'PENGATURAN PEMUTARAN & AUDIO',
+          style: TextStyle(color: AppTheme.primaryEmerald, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
         ),
         const SizedBox(height: 8),
 
-        // Background playback
         _buildActionTile(
-          icon: Icons.headset,
+          icon: Icons.headset_rounded,
           title: 'Pemutar Latar Belakang (Background)',
-          subtitle: 'Audio tetap berputar saat layar mati atau keluar aplikasi',
+          subtitle: 'Audio tetap berputar saat layar mati atau membuka aplikasi lain',
           trailing: Switch(
             value: _backgroundPlayEnabled,
-            activeColor: const Color(0xFF1DB954),
+            activeColor: AppTheme.primaryEmerald,
             onChanged: (val) {
               setState(() => _backgroundPlayEnabled = val);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(val ? 'Background playback diaktifkan' : 'Background playback dinonaktifkan'),
-                  backgroundColor: const Color(0xFF1DB954),
-                ),
-              );
             },
           ),
           onTap: () {},
         ),
 
-        // Sleep timer
         _buildActionTile(
           icon: Icons.timer_outlined,
           title: 'Sleep Timer (Mati Otomatis)',
           subtitle: _sleepTimerMinutes > 0 ? 'Aktif: $_sleepTimerMinutes menit' : 'Tidak aktif',
-          trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.textTertiary),
           onTap: _showSleepTimerDialog,
         ),
 
-        // Audio quality
         _buildActionTile(
-          icon: Icons.high_quality,
+          icon: Icons.high_quality_rounded,
           title: 'Kualitas Streaming Audio',
           subtitle: _selectedQuality,
-          trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.textTertiary),
           onTap: _showQualityDialog,
         ),
 
         const SizedBox(height: 20),
         const Text(
-          'Penyimpanan & Aplikasi',
-          style: TextStyle(color: Color(0xFF1DB954), fontSize: 13, fontWeight: FontWeight.bold),
+          'PENYIMPANAN & APLIKASI',
+          style: TextStyle(color: AppTheme.primaryEmerald, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
         ),
         const SizedBox(height: 8),
 
-        // Clear Cache
         _buildActionTile(
-          icon: Icons.cleaning_services_outlined,
-          title: 'Bersihkan Cache Audio & Data',
+          icon: Icons.cleaning_services_rounded,
+          title: 'Bersihkan Cache Data',
           subtitle: 'Kosongkan memori sementara',
-          trailing: const Icon(Icons.delete_outline, color: Colors.grey),
+          trailing: const Icon(Icons.delete_outline_rounded, color: AppTheme.textTertiary),
           onTap: _clearCache,
         ),
 
-        // About App
         _buildActionTile(
-          icon: Icons.info_outline,
+          icon: Icons.info_outline_rounded,
           title: 'Tentang Aplikasi & Sumber API',
           subtitle: 'Informasi lisensi dan pengembang',
-          trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.textTertiary),
           onTap: _showAboutDialog,
         ),
       ],
@@ -850,36 +1132,42 @@ class _SettingsViewState extends State<_SettingsView> {
     Widget? trailing,
     required VoidCallback onTap,
   }) {
-    return Card(
-      color: const Color(0xFF1E1E1E),
+    return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Row(
-            children: [
-              Icon(icon, color: const Color(0xFF1DB954), size: 24),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+      decoration: BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.divider, width: 1),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon, color: AppTheme.primaryEmerald, size: 22),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(subtitle, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              if (trailing != null) trailing,
-            ],
+                if (trailing != null) trailing,
+              ],
+            ),
           ),
         ),
       ),
