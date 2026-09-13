@@ -1267,22 +1267,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
   }
 
-  /// Secondary utility row with Favorite heart aligned horizontally, Playlist pill, Backsound & Mixer badge, and Sleep timer status
+  /// Secondary utility row with Favorite heart and active Sleep Timer indicator
   Widget _buildSecondaryUtilityRow(AudioPlayerService player, QuranApiService api) {
     final surahNum = player.currentSurah?.number ?? 1;
     final isFav = api.isFavorite(surahNum);
 
-    // Active backsound name
-    String? activeBacksoundName;
-    for (final b in Backsound.presets) {
-      if (player.isBacksoundActive(b.id)) {
-        activeBacksoundName = b.name.split(' ').first;
-        break;
-      }
-    }
-
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -1299,12 +1290,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     color: isFav ? Colors.redAccent : AppTheme.textTertiary,
                     size: 22,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 6),
                   Text(
                     isFav ? 'Favorit' : 'Sukai',
                     style: TextStyle(
                       color: isFav ? Colors.redAccent : AppTheme.textSecondary,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1313,78 +1304,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
             ),
           ),
 
-          // 2. Playlist Pill
-          InkWell(
-            onTap: () => _showPlaylistBottomSheet(context),
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: AppTheme.bgSurface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppTheme.divider, width: 1),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.queue_music_rounded, size: 14, color: AppTheme.primaryEmerald),
-                  SizedBox(width: 4),
-                  Text(
-                    'Playlist',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // 3. Backsound & Mixer status pill
-          InkWell(
-            onTap: () => _showVolumeMixerBottomSheet(context),
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: activeBacksoundName != null
-                    ? AppTheme.primaryEmerald.withValues(alpha: 0.15)
-                    : AppTheme.bgSurface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: activeBacksoundName != null ? AppTheme.primaryEmerald : AppTheme.divider,
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.tune_rounded,
-                    size: 14,
-                    color: activeBacksoundName != null ? AppTheme.primaryEmerald : AppTheme.textTertiary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    activeBacksoundName ?? 'Mixer',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: activeBacksoundName != null ? AppTheme.primaryEmerald : AppTheme.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // 4. Sleep Timer indicator
+          // 2. Sleep Timer indicator (if active)
           if (player.sleepTimerMinutes > 0)
             InkWell(
               onTap: () => _showVolumeMixerBottomSheet(context),
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: AppTheme.primaryEmerald.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(14),
@@ -1405,7 +1331,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   ],
                 ),
               ),
-            ),
+            )
+          else
+            const SizedBox.shrink(),
         ],
       ),
     );
