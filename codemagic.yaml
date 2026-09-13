@@ -18,7 +18,7 @@ workflows:
       - name: Build Android APK
         script: |
           flutter packages pub get
-          flutter build apk --release
+          flutter build apk --release --no-tree-shake-icons
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
       - build/app/outputs/bundle/release/*.aab
