@@ -38,6 +38,8 @@ class AudioPlayerService extends ChangeNotifier {
   List<AudioSource>? _playlistSources;
   String? _playlistQariId;
 
+  double _quranVolume = 1.0;
+
   List<Surah> get surahList => _surahList;
   Surah? get currentSurah => _currentSurah;
   Qari? get currentQari => _currentQari;
@@ -52,6 +54,9 @@ class AudioPlayerService extends ChangeNotifier {
   bool get isShuffle => _isShuffle;
   QuranLoopMode get loopMode => _loopMode;
   int get sleepTimerMinutes => _sleepTimerMinutes;
+  double get quranVolume => _quranVolume;
+  String? get activeBacksoundId => _activeBacksoundIds.isNotEmpty ? _activeBacksoundIds.first : null;
+  double get activeBacksoundVolume => activeBacksoundId != null ? getBacksoundVolume(activeBacksoundId!) : 0.4;
 
   AudioPlayer get quranPlayer => _quranPlayer;
 
@@ -448,10 +453,17 @@ class AudioPlayerService extends ChangeNotifier {
     }
   }
 
+  Future<void> setQuranVolume(double volume) async {
+    _quranVolume = volume.clamp(0.0, 1.0);
+    await _quranPlayer.setVolume(_quranVolume);
+    notifyListeners();
+  }
+
   Future<void> setBacksoundVolume(String id, double volume) async {
-    _volumes[id] = volume;
+    final v = volume.clamp(0.0, 1.0);
+    _volumes[id] = v;
     if (_activeBacksoundIds.contains(id)) {
-      await _backsounds[id]?.setVolume(volume);
+      await _backsounds[id]?.setVolume(v);
     }
     notifyListeners();
   }
