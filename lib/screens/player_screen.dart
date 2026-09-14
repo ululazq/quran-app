@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/audio_player_service.dart';
@@ -869,12 +870,13 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
               if (_pageController.hasClients &&
                   _pageController.page?.round() != currentSurahIdx &&
                   !_isUserSwiping) {
-                if (_showAyahOverlay) {
+                final pageDiff = ((_pageController.page?.round() ?? 0) - currentSurahIdx).abs();
+                if (_showAyahOverlay || pageDiff > 1) {
                   _pageController.jumpToPage(currentSurahIdx);
                 } else {
                   _pageController.animateToPage(
                     currentSurahIdx,
-                    duration: const Duration(milliseconds: 350),
+                    duration: const Duration(milliseconds: 300),
                     curve: Curves.easeOutCubic,
                   );
                 }
@@ -1019,8 +1021,8 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
 
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
-        if (notification is ScrollStartNotification) {
-          _isUserSwiping = true;
+        if (notification is UserScrollNotification) {
+          _isUserSwiping = notification.direction != ScrollDirection.idle;
         } else if (notification is ScrollEndNotification) {
           _isUserSwiping = false;
         }
@@ -1032,7 +1034,8 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
         itemCount: itemCount,
         physics: const BouncingScrollPhysics(),
         onPageChanged: (index) {
-          if (allSurahs.isNotEmpty && index < allSurahs.length) {
+          // Only trigger audio playback if user actively swiped with finger
+          if (_isUserSwiping && allSurahs.isNotEmpty && index < allSurahs.length) {
             final targetSurah = allSurahs[index];
             if (player.currentSurah?.number != targetSurah.number) {
               HapticFeedback.lightImpact();
