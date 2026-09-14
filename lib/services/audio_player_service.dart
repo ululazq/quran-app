@@ -17,7 +17,6 @@ enum QuranLoopMode {
 class AudioPlayerService extends ChangeNotifier {
   final AudioPlayer _quranPlayer = AudioPlayer();
   final Map<String, ap.AudioPlayer> _backsounds = {};
-  final Map<String, double> _volumes = {};
 
   List<Surah> _surahList = [];
   Surah? _currentSurah;
@@ -47,6 +46,8 @@ class AudioPlayerService extends ChangeNotifier {
   PlayerState get playerState => _playerState;
   Duration get position => _position;
   Duration get duration => _duration;
+  double _ambientVolume = 0.5;
+
   bool get isPlaying => _isPlaying;
   bool get isChangingTrack => _isChangingTrack;
   bool get isSeekable => _duration.inSeconds > 0;
@@ -56,7 +57,8 @@ class AudioPlayerService extends ChangeNotifier {
   int get sleepTimerMinutes => _sleepTimerMinutes;
   double get quranVolume => _quranVolume;
   String? get activeBacksoundId => _activeBacksoundIds.isNotEmpty ? _activeBacksoundIds.first : null;
-  double get activeBacksoundVolume => activeBacksoundId != null ? getBacksoundVolume(activeBacksoundId!) : 0.4;
+  double get ambientVolume => _ambientVolume;
+  double get activeBacksoundVolume => _ambientVolume;
 
   AudioPlayer get quranPlayer => _quranPlayer;
 
@@ -150,9 +152,7 @@ class AudioPlayerService extends ChangeNotifier {
 
     _quranPlayer.playerStateStream.listen((state) {
       _playerState = state;
-      if (!_isChangingTrack) {
-        _isPlaying = state.playing;
-      }
+      _isPlaying = state.playing;
       if (state.playing) {
         _resumeActiveBacksounds();
       } else {
@@ -172,8 +172,9 @@ class AudioPlayerService extends ChangeNotifier {
     });
 
     _quranPlayer.currentIndexStream.listen((index) {
-      if (index != null && _surahList.isNotEmpty && index >= 0 && index < _surahList.length) {
-        final newSurah = _surahList[index];
+      final list = _effectiveSurahList;
+      if (index != null && list.isNotEmpty && index >= 0 && index < list.length) {
+        final newSurah = list[index];
         if (_currentSurah?.number != newSurah.number) {
           _currentSurah = newSurah;
           if (_currentQari != null) {
@@ -228,11 +229,10 @@ class AudioPlayerService extends ChangeNotifier {
   }
 
   Future<void> play(Qari qari, Surah surah) async {
-    if (_isChangingTrack) return;
-    _isChangingTrack = true;
     _currentQari = qari;
     _currentSurah = surah;
     _isPlaying = true;
+    _isChangingTrack = true;
     notifyListeners();
 
     final url = _buildAudioUrl(qari, surah.number);
@@ -244,7 +244,7 @@ class AudioPlayerService extends ChangeNotifier {
     if (targetIndex < 0) targetIndex = (surah.number - 1).clamp(0, list.length - 1);
 
     try {
-      if (_playlistQariId != qari.id || _playlistSources == null) {
+      if (_playlistQariId != qari.id || _playlistSources == null || _quranPlayer.audioSource == null) {
         final sources = _createAudioSources(qari);
         _playlistSources = sources;
         _playlistQariId = qari.id;
@@ -254,25 +254,21 @@ class AudioPlayerService extends ChangeNotifier {
           initialPosition: Duration.zero,
         );
       } else {
-        if (_quranPlayer.currentIndex != targetIndex) {
-          await _quranPlayer.seek(Duration.zero, index: targetIndex);
-        } else {
-          await _quranPlayer.seek(Duration.zero);
-        }
+        await _quranPlayer.seek(Duration.zero, index: targetIndex);
       }
       await _quranPlayer.play();
       _startPositionTimer();
     } catch (e) {
       debugPrint('Error playing audio: $e');
-      _isPlaying = false;
     } finally {
       _isChangingTrack = false;
+      _isPlaying = _quranPlayer.playing;
       notifyListeners();
     }
   }
 
   Future<void> playNext() async {
-    if (_currentSurah == null || _isChangingTrack) return;
+    if (_currentSurah == null) return;
     final qari = _currentQari ?? Qari.defaultQaris.first;
     final list = _effectiveSurahList;
 
@@ -298,16 +294,14 @@ class AudioPlayerService extends ChangeNotifier {
       final currentIndex = list.indexWhere((s) => s.number == _currentSurah!.number);
       if (currentIndex >= 0 && currentIndex < list.length - 1) {
         await play(qari, list[currentIndex + 1]);
-        return;
       } else {
         await play(qari, list.first);
-        return;
       }
     }
   }
 
   Future<void> playPrevious() async {
-    if (_currentSurah == null || _isChangingTrack) return;
+    if (_currentSurah == null) return;
     final qari = _currentQari ?? Qari.defaultQaris.first;
     final list = _effectiveSurahList;
 
@@ -323,30 +317,46 @@ class AudioPlayerService extends ChangeNotifier {
       final currentIndex = list.indexWhere((s) => s.number == _currentSurah!.number);
       if (currentIndex > 0) {
         await play(qari, list[currentIndex - 1]);
-        return;
       } else {
         await play(qari, list.last);
-        return;
       }
     }
   }
 
   Future<void> pause() async {
-    await _quranPlayer.pause();
+    _isPlaying = false;
+    notifyListeners();
+    try {
+      await _quranPlayer.pause();
+    } catch (e) {
+      debugPrint('Error pausing audio: $e');
+    }
     await _pauseActiveBacksounds();
     _positionTimer?.cancel();
     notifyListeners();
   }
 
   Future<void> resume() async {
-    await _quranPlayer.play();
+    _isPlaying = true;
+    notifyListeners();
+    try {
+      await _quranPlayer.play();
+    } catch (e) {
+      debugPrint('Error resuming audio: $e');
+    }
     await _resumeActiveBacksounds();
     _startPositionTimer();
     notifyListeners();
   }
 
   Future<void> stop() async {
-    await _quranPlayer.stop();
+    _isPlaying = false;
+    notifyListeners();
+    try {
+      await _quranPlayer.stop();
+    } catch (e) {
+      debugPrint('Error stopping audio: $e');
+    }
     await _pauseActiveBacksounds();
     _positionTimer?.cancel();
     _position = Duration.zero;
@@ -373,7 +383,7 @@ class AudioPlayerService extends ChangeNotifier {
 
   bool isBacksoundActive(String id) => _activeBacksoundIds.contains(id);
   bool isBacksoundLoading(String id) => _loadingBacksoundIds.contains(id);
-  double getBacksoundVolume(String id) => _volumes[id] ?? 0.3;
+  double getBacksoundVolume(String id) => _ambientVolume;
 
   Future<void> _pauseActiveBacksounds() async {
     for (final id in _activeBacksoundIds) {
@@ -412,8 +422,6 @@ class AudioPlayerService extends ChangeNotifier {
 
     _activeBacksoundIds.add(backsound.id);
     _loadingBacksoundIds.add(backsound.id);
-    final volume = _volumes[backsound.id] ?? backsound.defaultVolume;
-    _volumes[backsound.id] = volume;
     notifyListeners();
 
     try {
@@ -431,7 +439,7 @@ class AudioPlayerService extends ChangeNotifier {
           ? backsound.assetPath.substring(7)
           : backsound.assetPath;
 
-      await player.setVolume(volume);
+      await player.setVolume(_ambientVolume);
       await player.play(ap.AssetSource(relativeAssetPath));
       if (!_isPlaying) {
         await player.pause();
@@ -463,13 +471,20 @@ class AudioPlayerService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setBacksoundVolume(String id, double volume) async {
-    final v = volume.clamp(0.0, 1.0);
-    _volumes[id] = v;
-    if (_activeBacksoundIds.contains(id)) {
-      await _backsounds[id]?.setVolume(v);
+  Future<void> setAmbientVolume(double volume) async {
+    _ambientVolume = volume.clamp(0.0, 1.0);
+    for (final id in _activeBacksoundIds) {
+      try {
+        await _backsounds[id]?.setVolume(_ambientVolume);
+      } catch (e) {
+        debugPrint('Error setting ambient volume for $id: $e');
+      }
     }
     notifyListeners();
+  }
+
+  Future<void> setBacksoundVolume(String id, double volume) async {
+    await setAmbientVolume(volume);
   }
 
   void stopAllBacksounds() {

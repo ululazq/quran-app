@@ -491,33 +491,31 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               ),
                               const SizedBox(height: 10),
 
-                              // 2. Ambient Backsound Volume Slider
+                              // 2. Integrated Ambient Backsound Volume Slider
                               Row(
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.spa_rounded,
-                                    color: activeBacksoundId != null ? AppTheme.accentGoldLight : AppTheme.textTertiary,
+                                    color: AppTheme.accentGoldLight,
                                     size: 20,
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
                                       activeBacksoundName != null
-                                          ? 'Volume Suara ($activeBacksoundName)'
-                                          : 'Volume Suara Alam (Nonaktif)',
-                                      style: TextStyle(
-                                        color: activeBacksoundId != null ? AppTheme.textPrimary : AppTheme.textTertiary,
+                                          ? 'Volume Suara Alam ($activeBacksoundName)'
+                                          : 'Volume Suara Alam (Ambient)',
+                                      style: const TextStyle(
+                                        color: AppTheme.textPrimary,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
                                   Text(
-                                    activeBacksoundId != null
-                                        ? '${(player.activeBacksoundVolume * 100).round()}%'
-                                        : '0%',
-                                    style: TextStyle(
-                                      color: activeBacksoundId != null ? AppTheme.accentGoldLight : AppTheme.textTertiary,
+                                    '${(player.ambientVolume * 100).round()}%',
+                                    style: const TextStyle(
+                                      color: AppTheme.accentGoldLight,
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -534,14 +532,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                   thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
                                 ),
                                 child: Slider(
-                                  value: activeBacksoundId != null ? player.activeBacksoundVolume : 0.0,
+                                  value: player.ambientVolume,
                                   min: 0.0,
                                   max: 1.0,
-                                  onChanged: activeBacksoundId != null
-                                      ? (val) {
-                                          player.setBacksoundVolume(activeBacksoundId, val);
-                                        }
-                                      : null,
+                                  onChanged: (val) {
+                                    player.setAmbientVolume(val);
+                                  },
                                 ),
                               ),
                             ],
