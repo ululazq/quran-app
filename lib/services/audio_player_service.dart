@@ -272,6 +272,7 @@ class AudioPlayerService extends ChangeNotifier {
     if (_currentSurah == null) return;
     final qari = _currentQari ?? Qari.defaultQaris.first;
     final list = _effectiveSurahList;
+    if (list.isEmpty) return;
 
     if (_isShuffle && list.length > 1) {
       final random = Random();
@@ -283,21 +284,11 @@ class AudioPlayerService extends ChangeNotifier {
       return;
     }
 
-    if (_quranPlayer.hasNext) {
-      try {
-        await _quranPlayer.seekToNext();
-        await _quranPlayer.play();
-        return;
-      } catch (_) {}
-    }
-
-    if (list.isNotEmpty) {
-      final currentIndex = list.indexWhere((s) => s.number == _currentSurah!.number);
-      if (currentIndex >= 0 && currentIndex < list.length - 1) {
-        await play(qari, list[currentIndex + 1]);
-      } else {
-        await play(qari, list.first);
-      }
+    final currentIndex = list.indexWhere((s) => s.number == _currentSurah!.number);
+    if (currentIndex >= 0 && currentIndex < list.length - 1) {
+      await play(qari, list[currentIndex + 1]);
+    } else {
+      await play(qari, list.first);
     }
   }
 
@@ -305,22 +296,13 @@ class AudioPlayerService extends ChangeNotifier {
     if (_currentSurah == null) return;
     final qari = _currentQari ?? Qari.defaultQaris.first;
     final list = _effectiveSurahList;
+    if (list.isEmpty) return;
 
-    if (_quranPlayer.hasPrevious) {
-      try {
-        await _quranPlayer.seekToPrevious();
-        await _quranPlayer.play();
-        return;
-      } catch (_) {}
-    }
-
-    if (list.isNotEmpty) {
-      final currentIndex = list.indexWhere((s) => s.number == _currentSurah!.number);
-      if (currentIndex > 0) {
-        await play(qari, list[currentIndex - 1]);
-      } else {
-        await play(qari, list.last);
-      }
+    final currentIndex = list.indexWhere((s) => s.number == _currentSurah!.number);
+    if (currentIndex > 0) {
+      await play(qari, list[currentIndex - 1]);
+    } else {
+      await play(qari, list.last);
     }
   }
 

@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -761,38 +760,15 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
     List<Ayah> ayahs,
     List<VerseTiming> timings,
   ) {
-    if (ayahs.isEmpty) return Duration.zero;
-    if (index <= 0) return Duration.zero;
+    if (ayahs.isEmpty || timings.isEmpty || index < 0) return Duration.zero;
 
-    // 1. Exact millisecond seek
-    if (timings.isNotEmpty) {
-      final targetVerse = index + 1;
-      final found = timings.firstWhere(
-        (t) => t.verseNumber == targetVerse,
-        orElse: () => timings[index.clamp(0, timings.length - 1)],
-      );
-      return Duration(milliseconds: found.timestampFrom);
-    }
-
-    // 2. Fallback weighted seek
-    if (duration.inMilliseconds <= 0) return Duration.zero;
-    if (index >= ayahs.length) return duration;
-
-    final weights = ayahs.map((a) {
-      final cleanLen = a.textArabic.replaceAll(RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED]'), '').trim().length;
-      return math.max(cleanLen, 8).toDouble();
-    }).toList();
-
-    final totalWeight = weights.fold<double>(0.0, (double sum, double w) => sum + w);
-    if (totalWeight <= 0) return Duration.zero;
-
-    double cumulative = 0.0;
-    for (int i = 0; i < index; i++) {
-      cumulative += weights[i];
-    }
-
-    final seekRatio = (cumulative / totalWeight).clamp(0.0, 1.0);
-    return Duration(milliseconds: (seekRatio * duration.inMilliseconds).round());
+    // Exact millisecond seek
+    final targetVerse = index + 1;
+    final found = timings.firstWhere(
+      (t) => t.verseNumber == targetVerse,
+      orElse: () => timings[index.clamp(0, timings.length - 1)],
+    );
+    return Duration(milliseconds: found.timestampFrom);
   }
 
   @override
@@ -1183,11 +1159,13 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                         return Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: () {
-                              final seekPos = _calculateAyahSeekPosition(index, player.duration, ayahs, _loadedTimings);
-                              player.seek(seekPos);
-                            },
-                            splashColor: AppTheme.primaryEmerald.withValues(alpha: 0.12),
+                            onTap: hasSync
+                                ? () {
+                                    final seekPos = _calculateAyahSeekPosition(index, player.duration, ayahs, _loadedTimings);
+                                    player.seek(seekPos);
+                                  }
+                                : null,
+                            splashColor: hasSync ? AppTheme.primaryEmerald.withValues(alpha: 0.12) : Colors.transparent,
                             highlightColor: Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
