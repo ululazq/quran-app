@@ -861,9 +861,12 @@ class _SettingsViewState extends State<_SettingsView> {
   }
 
   void _clearCache() {
+    context.read<QuranApiService>().clearMemoryCache();
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Cache data ayat dan audio sementara berhasil dibersihkan!'),
+        content: Text('Cache ayat dan memori sementara berhasil dibersihkan!'),
         backgroundColor: AppTheme.primaryEmerald,
         duration: Duration(seconds: 2),
       ),
@@ -960,7 +963,7 @@ class _SettingsViewState extends State<_SettingsView> {
               ),
               const SizedBox(height: 14),
               const Text(
-                'Sumber API: MP3Quran.net, AlQuran.cloud & Quran.com\nVersi: 1.0.1 (Build 2) Stable Pro Max',
+                'Sumber API: MP3Quran.net, AlQuran.cloud & Quran.com\nVersi 1.0.1 (Build 2)',
                 style: TextStyle(color: AppTheme.textTertiary, fontSize: 12),
               ),
             ],
@@ -988,11 +991,10 @@ class _SettingsViewState extends State<_SettingsView> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // App Info Header Card
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            gradient: AppTheme.cardGradient,
+            color: AppTheme.bgCard,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppTheme.divider, width: 1),
           ),
@@ -1004,12 +1006,6 @@ class _SettingsViewState extends State<_SettingsView> {
                 decoration: BoxDecoration(
                   gradient: AppTheme.emeraldGradient,
                   borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryEmerald.withValues(alpha: 0.3),
-                      blurRadius: 10,
-                    ),
-                  ],
                 ),
                 child: const Center(
                   child: Icon(Icons.auto_stories_rounded, color: Colors.black, size: 28),
@@ -1020,7 +1016,7 @@ class _SettingsViewState extends State<_SettingsView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Quranizer Pro Max',
+                    'Quranizer',
                     style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 2),
@@ -1047,9 +1043,29 @@ class _SettingsViewState extends State<_SettingsView> {
             activeColor: AppTheme.primaryEmerald,
             onChanged: (val) {
               setState(() => _backgroundPlayEnabled = val);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(val
+                      ? 'Pemutaran latar belakang aktif.'
+                      : 'Pemutaran latar belakang dinonaktifkan.'),
+                  backgroundColor: AppTheme.primaryEmerald,
+                  duration: const Duration(seconds: 1),
+                ),
+              );
             },
           ),
-          onTap: () {},
+          onTap: () {
+            setState(() => _backgroundPlayEnabled = !_backgroundPlayEnabled);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(_backgroundPlayEnabled
+                    ? 'Pemutaran latar belakang aktif.'
+                    : 'Pemutaran latar belakang dinonaktifkan.'),
+                backgroundColor: AppTheme.primaryEmerald,
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          },
         ),
 
         _buildActionTile(
@@ -1091,7 +1107,7 @@ class _SettingsViewState extends State<_SettingsView> {
               style: TextStyle(color: AppTheme.primaryEmerald, fontSize: 11, fontWeight: FontWeight.bold),
             ),
           ),
-          onTap: () {},
+          onTap: _showAboutDialog,
         ),
 
         _buildActionTile(

@@ -46,18 +46,13 @@ class MiniPlayer extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
-                ),
-                BoxShadow(
-                  color: AppTheme.primaryEmerald.withValues(alpha: 0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
               ],
               border: Border.all(
-                color: AppTheme.primaryEmerald.withValues(alpha: 0.3),
+                color: AppTheme.divider,
                 width: 1,
               ),
             ),
@@ -66,7 +61,6 @@ class MiniPlayer extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Top Emerald Progress Bar
                   LinearProgressIndicator(
                     value: progress,
                     minHeight: 2.5,
@@ -77,7 +71,6 @@ class MiniPlayer extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     child: Row(
                       children: [
-                        // Title & Subtitle Info (Surah & Qari)
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

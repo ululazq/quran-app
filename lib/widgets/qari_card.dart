@@ -54,7 +54,6 @@ class QariCard extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Avatar with Emerald ring
                 Stack(
                   alignment: Alignment.bottomRight,
                   children: [
@@ -105,7 +104,6 @@ class QariCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
 
-                // Qari Name
                 Text(
                   qari.name,
                   textAlign: TextAlign.center,
@@ -122,7 +120,6 @@ class QariCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
 
-                // Riwayah / Style tag
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(

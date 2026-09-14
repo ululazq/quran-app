@@ -989,7 +989,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       key: const ValueKey('ayah_reader_view'),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF0C101A).withValues(alpha: 0.76),
+        color: const Color(0xFF090D16).withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.12),
@@ -1006,10 +1006,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: Column(
             children: [
-              // Minimal Header Bar
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 10, 6),
                 child: Row(
@@ -1027,14 +1026,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     Text(
                       '• Ayat $activeAyahIndex/${ayahs.length}',
                       style: const TextStyle(
-                        color: AppTheme.textSecondary,
+                        color: Color(0xFF94A3B8),
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     const Spacer(),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: AppTheme.textTertiary, size: 20),
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8), size: 20),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       tooltip: 'Tutup',
@@ -1045,7 +1044,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
               ),
               const Divider(color: AppTheme.divider, height: 1),
 
-              // Synchronized Verses List
               Expanded(
                 child: _isLoadingAyahs && ayahs.isEmpty
                     ? const Center(
@@ -1088,7 +1086,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.stretch,
                                     children: [
-                                      // Top index badge
                                       Row(
                                         children: [
                                           Container(
@@ -1112,7 +1109,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                           ],
                                           const Spacer(),
                                           IconButton(
-                                            icon: const Icon(Icons.copy_rounded, size: 14, color: AppTheme.textTertiary),
+                                            icon: const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF94A3B8)),
                                             padding: EdgeInsets.zero,
                                             constraints: const BoxConstraints(),
                                             tooltip: 'Salin Ayat',
@@ -1135,7 +1132,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                       ),
                                       const SizedBox(height: 6),
 
-                                      // Arabic Text
                                       Text(
                                         ayah.textArabic,
                                         textAlign: TextAlign.right,
@@ -1145,18 +1141,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                           fontSize: 22,
                                           height: 1.9,
                                           fontWeight: FontWeight.w600,
+                                          shadows: const [
+                                            Shadow(
+                                              color: Colors.black54,
+                                              blurRadius: 4,
+                                              offset: Offset(0, 1),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(height: 6),
 
-                                      // Translation
                                       Text(
                                         ayah.translation,
                                         textAlign: TextAlign.left,
                                         style: TextStyle(
-                                          color: isCurrent ? AppTheme.textPrimary : AppTheme.textSecondary,
+                                          color: isCurrent ? Colors.white : const Color(0xFFCBD5E1),
                                           fontSize: 12,
                                           height: 1.35,
+                                          fontWeight: isCurrent ? FontWeight.w500 : FontWeight.normal,
                                         ),
                                       ),
                                     ],

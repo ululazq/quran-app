@@ -228,4 +228,10 @@ class QuranApiService extends ChangeNotifier {
     _currentQari = qari;
     notifyListeners();
   }
+
+  void clearMemoryCache() {
+    _ayahsCache.clear();
+    _verseTimingsCache.clear();
+    notifyListeners();
+  }
 }

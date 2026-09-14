@@ -54,7 +54,6 @@ class SurahCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
-                // Islamic Octagonal Number Badge
                 Container(
                   width: 42,
                   height: 42,
@@ -83,7 +82,6 @@ class SurahCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 14),
 
-                // Surah Name (Latin) & Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,7 +147,6 @@ class SurahCard extends StatelessWidget {
                   ),
                 ),
 
-                // Arabic Calligraphy Text
                 Text(
                   surah.nameArabic,
                   textDirection: TextDirection.rtl,
