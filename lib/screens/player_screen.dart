@@ -18,9 +18,11 @@ class PlayerScreen extends StatefulWidget {
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
 
-class _PlayerScreenState extends State<PlayerScreen> {
+class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderStateMixin {
   final ScrollController _ayahScrollController = ScrollController();
   late PageController _pageController;
+  late AnimationController _ayahAnimController;
+  late Animation<double> _ayahAnim;
   List<Ayah> _loadedAyahs = [];
   List<VerseTiming> _loadedTimings = [];
   bool _isLoadingAyahs = false;
@@ -34,8 +36,32 @@ class _PlayerScreenState extends State<PlayerScreen> {
     super.initState();
     final initialSurahNum = context.read<AudioPlayerService>().currentSurah?.number ?? 1;
     _pageController = PageController(initialPage: (initialSurahNum - 1).clamp(0, 113));
+    _ayahAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    _ayahAnim = CurvedAnimation(
+      parent: _ayahAnimController,
+      curve: Curves.easeInOutCubic,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchAyahs();
+    });
+  }
+
+  void _toggleAyahOverlay() {
+    setState(() {
+      _showAyahOverlay = !_showAyahOverlay;
+      if (_showAyahOverlay) {
+        _ayahAnimController.forward();
+      } else {
+        // Ensure PageController is precisely anchored to current surah without any horizontal swipe jump
+        final currentSurahIdx = (context.read<AudioPlayerService>().currentSurah?.number ?? 1) - 1;
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(currentSurahIdx);
+        }
+        _ayahAnimController.reverse();
+      }
     });
   }
 
@@ -86,6 +112,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    _ayahAnimController.dispose();
     _pageController.dispose();
     _ayahScrollController.dispose();
     super.dispose();
@@ -842,11 +869,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
               if (_pageController.hasClients &&
                   _pageController.page?.round() != currentSurahIdx &&
                   !_isUserSwiping) {
-                _pageController.animateToPage(
-                  currentSurahIdx,
-                  duration: const Duration(milliseconds: 350),
-                  curve: Curves.easeOutCubic,
-                );
+                if (_showAyahOverlay) {
+                  _pageController.jumpToPage(currentSurahIdx);
+                } else {
+                  _pageController.animateToPage(
+                    currentSurahIdx,
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutCubic,
+                  );
+                }
               }
             });
           }
@@ -867,15 +898,44 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     children: [
                       _buildAppBar(player, api),
 
-                      // Center Canvas: Gallery Carousel when Ayahs closed vs Seamless Frameless Reader when Ayahs open
+                      // Center Canvas: Smooth Animated Transition between Centered Calligraphy and Frameless Ayah Reader
                       Expanded(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 350),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          child: _showAyahOverlay
-                              ? _buildFramelessAyahReader(player, _loadedAyahs, activeAyahIndex)
-                              : _buildGalleryCarousel(player, api, allSurahs),
+                        child: AnimatedBuilder(
+                          animation: _ayahAnim,
+                          builder: (context, _) {
+                            final animVal = _ayahAnim.value;
+                            return Stack(
+                              children: [
+                                // 1. Gallery Carousel (Calligraphy Centered) - Slides up & fades out smoothly
+                                Positioned.fill(
+                                  child: Transform.translate(
+                                    offset: Offset(0, -50 * animVal),
+                                    child: Opacity(
+                                      opacity: (1.0 - animVal).clamp(0.0, 1.0),
+                                      child: IgnorePointer(
+                                        ignoring: animVal > 0.5,
+                                        child: _buildGalleryCarousel(player, api, allSurahs),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                // 2. Frameless Ayah Reader - Slides in from below & fades in seamlessly
+                                Positioned.fill(
+                                  child: Transform.translate(
+                                    offset: Offset(0, 45 * (1.0 - animVal)),
+                                    child: Opacity(
+                                      opacity: animVal.clamp(0.0, 1.0),
+                                      child: IgnorePointer(
+                                        ignoring: animVal < 0.5,
+                                        child: _buildFramelessAyahReader(player, _loadedAyahs, activeAyahIndex),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
 
@@ -920,7 +980,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   shadows: const [Shadow(color: Colors.black87, blurRadius: 10)],
                 ),
                 tooltip: _showAyahOverlay ? 'Tutup Ayat' : 'Buka Ayat',
-                onPressed: () => setState(() => _showAyahOverlay = !_showAyahOverlay),
+                onPressed: _toggleAyahOverlay,
               ),
               IconButton(
                 icon: const Icon(
@@ -1070,7 +1130,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
   }
 
-  /// Seamless, Frameless Ayah Reader directly integrated into the Now Playing canvas (No outer frame/box)
+  /// Seamless, Frameless Ayah Reader blending 100% with the background canvas (Zero card boxes)
   Widget _buildFramelessAyahReader(
     AudioPlayerService player,
     List<Ayah> ayahs,
@@ -1081,9 +1141,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     });
 
     return Column(
-      key: const ValueKey('frameless_ayah_reader'),
       children: [
-        // Compact Top Header (Surah Calligraphy & Qari)
+        // Compact Top Header (Surah Calligraphy & Verse Count)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           child: Row(
@@ -1105,7 +1164,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.4),
+                  color: Colors.black.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppTheme.primaryEmerald.withValues(alpha: 0.5)),
                 ),
@@ -1122,7 +1181,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           ),
         ),
 
-        // Frameless Scrollable Ayah List directly over the canvas
+        // Pure Frameless Scrollable Ayah List directly over canvas
         Expanded(
           child: _isLoadingAyahs && ayahs.isEmpty
               ? const Center(
@@ -1135,121 +1194,153 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   : ListView.builder(
                       controller: _ayahScrollController,
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                       itemCount: ayahs.length,
                       itemBuilder: (context, index) {
                         final ayah = ayahs[index];
                         final isCurrent = ayah.numberInSurah == activeAyahIndex && player.isPlaying;
 
-                        return InkWell(
-                          onTap: () {
-                            final seekPos = _calculateAyahSeekPosition(index, player.duration, ayahs, _loadedTimings);
-                            player.seek(seekPos);
-                          },
-                          borderRadius: BorderRadius.circular(14),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: isCurrent
-                                  ? const Color(0xFF090D16).withValues(alpha: 0.78)
-                                  : Colors.black.withValues(alpha: 0.28),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: isCurrent
-                                    ? AppTheme.primaryEmerald.withValues(alpha: 0.65)
-                                    : Colors.white.withValues(alpha: 0.08),
-                                width: isCurrent ? 1.5 : 0.8,
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: isCurrent ? AppTheme.primaryEmerald : Colors.white.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        '${ayah.numberInSurah}',
-                                        style: TextStyle(
-                                          color: isCurrent ? Colors.black : AppTheme.accentGoldLight,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              final seekPos = _calculateAyahSeekPosition(index, player.duration, ayahs, _loadedTimings);
+                              player.seek(seekPos);
+                            },
+                            splashColor: AppTheme.primaryEmerald.withValues(alpha: 0.12),
+                            highlightColor: Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Minimal Verse Number Indicator & Action
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: isCurrent
+                                              ? AppTheme.accentGoldLight.withValues(alpha: 0.22)
+                                              : Colors.white.withValues(alpha: 0.08),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: isCurrent
+                                                ? AppTheme.accentGoldLight.withValues(alpha: 0.6)
+                                                : Colors.white.withValues(alpha: 0.12),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              '${ayah.numberInSurah}',
+                                              style: TextStyle(
+                                                color: isCurrent ? AppTheme.accentGoldLight : AppTheme.textSecondary,
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            if (isCurrent) ...[
+                                              const SizedBox(width: 4),
+                                              const Icon(Icons.graphic_eq_rounded, size: 12, color: AppTheme.accentGoldLight),
+                                            ],
+                                          ],
                                         ),
                                       ),
-                                    ),
-                                    if (isCurrent) ...[
-                                      const SizedBox(width: 6),
-                                      const Icon(Icons.graphic_eq_rounded, size: 14, color: AppTheme.primaryEmerald),
-                                    ],
-                                    const Spacer(),
-                                    IconButton(
-                                      icon: const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF94A3B8)),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      tooltip: 'Salin Ayat',
-                                      onPressed: () {
-                                        Clipboard.setData(
-                                          ClipboardData(
-                                            text: '${ayah.textArabic}\n\n"${ayah.translation}" (QS. ${player.currentSurah?.name}: ${ayah.numberInSurah})',
-                                          ),
-                                        );
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Ayat ${ayah.numberInSurah} disalin'),
-                                            duration: const Duration(seconds: 1),
-                                            backgroundColor: AppTheme.primaryEmerald,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-
-                                Text(
-                                  ayah.textArabic,
-                                  textAlign: TextAlign.right,
-                                  textDirection: TextDirection.rtl,
-                                  style: TextStyle(
-                                    color: isCurrent ? AppTheme.primaryEmeraldLight : AppTheme.textPrimary,
-                                    fontSize: 22,
-                                    height: 1.9,
-                                    fontWeight: FontWeight.w600,
-                                    shadows: const [
-                                      Shadow(
-                                        color: Colors.black87,
-                                        blurRadius: 8,
-                                        offset: Offset(0, 1),
+                                      const Spacer(),
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.copy_rounded,
+                                          size: 14,
+                                          color: isCurrent ? AppTheme.accentGoldLight.withValues(alpha: 0.7) : Colors.white38,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        tooltip: 'Salin Ayat',
+                                        onPressed: () {
+                                          Clipboard.setData(
+                                            ClipboardData(
+                                              text: '${ayah.textArabic}\n\n"${ayah.translation}" (QS. ${player.currentSurah?.name}: ${ayah.numberInSurah})',
+                                            ),
+                                          );
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Ayat ${ayah.numberInSurah} disalin'),
+                                              duration: const Duration(seconds: 1),
+                                              backgroundColor: AppTheme.primaryEmerald,
+                                            ),
+                                          );
+                                        },
                                       ),
                                     ],
                                   ),
-                                ),
-                                const SizedBox(height: 6),
+                                  const SizedBox(height: 8),
 
-                                Text(
-                                  ayah.translation,
-                                  textAlign: TextAlign.left,
-                                  style: TextStyle(
-                                    color: isCurrent ? Colors.white : const Color(0xFFCBD5E1),
-                                    fontSize: 12.5,
-                                    height: 1.4,
-                                    fontWeight: isCurrent ? FontWeight.w500 : FontWeight.normal,
-                                    shadows: const [
-                                      Shadow(
-                                        color: Colors.black87,
-                                        blurRadius: 6,
-                                        offset: Offset(0, 1),
-                                      ),
-                                    ],
+                                  // Arabic Verse Text (Frameless, glowing highlight when active)
+                                  Text(
+                                    ayah.textArabic,
+                                    textAlign: TextAlign.right,
+                                    textDirection: TextDirection.rtl,
+                                    style: TextStyle(
+                                      fontFamily: 'Amiri',
+                                      color: isCurrent ? AppTheme.accentGoldLight : Colors.white,
+                                      fontSize: isCurrent ? 23 : 21,
+                                      height: 1.95,
+                                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
+                                      shadows: isCurrent
+                                          ? [
+                                              Shadow(
+                                                color: AppTheme.accentGold.withValues(alpha: 0.6),
+                                                blurRadius: 18,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                              const Shadow(
+                                                color: Colors.black87,
+                                                blurRadius: 10,
+                                                offset: Offset(0, 1),
+                                              ),
+                                            ]
+                                          : const [
+                                              Shadow(
+                                                color: Colors.black87,
+                                                blurRadius: 8,
+                                                offset: Offset(0, 1),
+                                              ),
+                                            ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 8),
+
+                                  // Translation Text (Crisp text floating directly on canvas)
+                                  Text(
+                                    ayah.translation,
+                                    textAlign: TextAlign.left,
+                                    style: TextStyle(
+                                      color: isCurrent ? Colors.white : Colors.white.withValues(alpha: 0.72),
+                                      fontSize: 12.5,
+                                      height: 1.45,
+                                      fontWeight: isCurrent ? FontWeight.w500 : FontWeight.normal,
+                                      shadows: const [
+                                        Shadow(
+                                          color: Colors.black87,
+                                          blurRadius: 8,
+                                          offset: Offset(0, 1),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Divider(
+                                    color: isCurrent
+                                        ? AppTheme.accentGoldLight.withValues(alpha: 0.3)
+                                        : Colors.white.withValues(alpha: 0.08),
+                                    height: 1,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );
