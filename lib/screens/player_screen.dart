@@ -98,8 +98,8 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
     }
   }
 
-  void _scrollToActiveAyah(int activeIndex) {
-    if (!_showAyahOverlay || !_ayahScrollController.hasClients || _loadedAyahs.isEmpty) return;
+  void _scrollToActiveAyah(int? activeIndex) {
+    if (!_showAyahOverlay || !_ayahScrollController.hasClients || _loadedAyahs.isEmpty || _loadedTimings.isEmpty || activeIndex == null) return;
     if (_lastScrolledAyahIndex == activeIndex) return;
     _lastScrolledAyahIndex = activeIndex;
 
@@ -734,51 +734,25 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
   }
 
 
-  int _calculateActiveAyahIndex(
+  int? _calculateActiveAyahIndex(
     Duration position,
     Duration duration,
     List<Ayah> ayahs,
     List<VerseTiming> timings,
   ) {
-    if (ayahs.isEmpty) return 1;
+    if (ayahs.isEmpty || timings.isEmpty) return null;
     final posMs = position.inMilliseconds;
 
-    // 1. Exact Millisecond Timestamp Sync (Quran.com & Quranify standard)
-    if (timings.isNotEmpty) {
-      for (final t in timings) {
-        if (posMs >= t.timestampFrom && posMs < t.timestampTo) {
-          return t.verseNumber;
-        }
-      }
-      if (posMs >= timings.last.timestampTo) {
-        return timings.last.verseNumber;
-      }
-      return timings.first.verseNumber;
-    }
-
-    // 2. Fallback: Weighted syllable/character pacing algorithm
-    if (duration.inMilliseconds <= 0 || posMs <= 0) return 1;
-    final progress = (posMs / duration.inMilliseconds).clamp(0.0, 1.0);
-    if (progress >= 0.999) return ayahs.length;
-
-    final weights = ayahs.map((a) {
-      final cleanLen = a.textArabic.replaceAll(RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED]'), '').trim().length;
-      return math.max(cleanLen, 8).toDouble();
-    }).toList();
-
-    final totalWeight = weights.fold<double>(0.0, (double sum, double w) => sum + w);
-    if (totalWeight <= 0) return 1;
-
-    final targetWeight = progress * totalWeight;
-    double cumulative = 0.0;
-
-    for (int i = 0; i < weights.length; i++) {
-      cumulative += weights[i];
-      if (targetWeight <= cumulative) {
-        return ayahs[i].numberInSurah;
+    // Exact Millisecond Timestamp Sync (Quran.com database standard)
+    for (final t in timings) {
+      if (posMs >= t.timestampFrom && posMs < t.timestampTo) {
+        return t.verseNumber;
       }
     }
-    return ayahs.last.numberInSurah;
+    if (posMs >= timings.last.timestampTo) {
+      return timings.last.verseNumber;
+    }
+    return timings.first.verseNumber;
   }
 
   Duration _calculateAyahSeekPosition(
@@ -1137,11 +1111,14 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
   Widget _buildFramelessAyahReader(
     AudioPlayerService player,
     List<Ayah> ayahs,
-    int activeAyahIndex,
+    int? activeAyahIndex,
   ) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToActiveAyah(activeAyahIndex);
-    });
+    final hasSync = _loadedTimings.isNotEmpty && activeAyahIndex != null;
+    if (hasSync) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToActiveAyah(activeAyahIndex);
+      });
+    }
 
     return Column(
       children: [
@@ -1172,7 +1149,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                   border: Border.all(color: AppTheme.primaryEmerald.withValues(alpha: 0.5)),
                 ),
                 child: Text(
-                  'Ayat $activeAyahIndex/${ayahs.length}',
+                  hasSync ? 'Ayat $activeAyahIndex/${ayahs.length}' : '${ayahs.length} Ayat',
                   style: const TextStyle(
                     color: AppTheme.accentGoldLight,
                     fontSize: 11,
@@ -1201,7 +1178,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                       itemCount: ayahs.length,
                       itemBuilder: (context, index) {
                         final ayah = ayahs[index];
-                        final isCurrent = ayah.numberInSurah == activeAyahIndex && player.isPlaying;
+                        final isCurrent = hasSync && ayah.numberInSurah == activeAyahIndex && player.isPlaying;
 
                         return Material(
                           color: Colors.transparent,

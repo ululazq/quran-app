@@ -172,6 +172,7 @@ class AudioPlayerService extends ChangeNotifier {
     });
 
     _quranPlayer.currentIndexStream.listen((index) {
+      if (_isChangingTrack) return;
       final list = _effectiveSurahList;
       if (index != null && list.isNotEmpty && index >= 0 && index < list.length) {
         final newSurah = list[index];
