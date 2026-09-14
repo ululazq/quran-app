@@ -74,45 +74,10 @@ class MiniPlayer extends StatelessWidget {
                     valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryEmerald),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     child: Row(
                       children: [
-                        // Album Art / Quran Emblem
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            gradient: AppTheme.emeraldGradient,
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.primaryEmerald.withValues(alpha: 0.3),
-                                blurRadius: 6,
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: player.isChangingTrack
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.black,
-                                    ),
-                                  )
-                                : Icon(
-                                    player.isPlaying
-                                        ? Icons.graphic_eq_rounded
-                                        : Icons.menu_book_rounded,
-                                    color: Colors.black,
-                                    size: 24,
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // Title & Subtitle Info
+                        // Title & Subtitle Info (Surah & Qari)
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
