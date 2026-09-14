@@ -1086,49 +1086,6 @@ class _SettingsViewState extends State<_SettingsView> {
 
         const SizedBox(height: 20),
         const Text(
-          'KONTRIBUTOR & DUKUNGAN',
-          style: TextStyle(color: AppTheme.primaryEmerald, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
-        ),
-        const SizedBox(height: 8),
-
-        _buildActionTile(
-          icon: Icons.person_rounded,
-          title: 'Pembuat / Kontributor',
-          subtitle: 'ululazq',
-          trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryEmerald.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppTheme.primaryEmerald.withValues(alpha: 0.4)),
-            ),
-            child: const Text(
-              'Creator',
-              style: TextStyle(color: AppTheme.primaryEmerald, fontSize: 11, fontWeight: FontWeight.bold),
-            ),
-          ),
-          onTap: _showAboutDialog,
-        ),
-
-        _buildActionTile(
-          icon: Icons.volunteer_activism_rounded,
-          title: 'Kritik, Saran & GoPay',
-          subtitle: 'kritik, saran dan gopay hubungi 085645567856',
-          trailing: const Icon(Icons.copy_rounded, color: AppTheme.primaryEmerald, size: 20),
-          onTap: () {
-            Clipboard.setData(const ClipboardData(text: '085645567856'));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Nomor 085645567856 berhasil disalin ke clipboard!'),
-                backgroundColor: AppTheme.primaryEmerald,
-                duration: Duration(seconds: 2),
-              ),
-            );
-          },
-        ),
-
-        const SizedBox(height: 20),
-        const Text(
           'PENYIMPANAN & APLIKASI',
           style: TextStyle(color: AppTheme.primaryEmerald, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
         ),
