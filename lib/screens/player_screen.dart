@@ -21,6 +21,7 @@ class PlayerScreen extends StatefulWidget {
 class _PlayerScreenState extends State<PlayerScreen> {
   final ScrollController _ayahScrollController = ScrollController();
   List<Ayah> _loadedAyahs = [];
+  List<VerseTiming> _loadedTimings = [];
   bool _isLoadingAyahs = false;
   bool _showAyahOverlay = false;
   int _lastLoadedSurah = -1;
@@ -47,10 +48,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
     setState(() => _isLoadingAyahs = true);
 
     try {
-      final ayahs = await api.loadAyahs(surahNum);
+      final ayahsFuture = api.loadAyahs(surahNum);
+      final qari = player.currentQari ?? api.currentQari ?? Qari.defaultQaris.first;
+      final timingsFuture = api.loadVerseTimings(surahNum, qari);
+
+      final results = await Future.wait([ayahsFuture, timingsFuture]);
       if (mounted) {
         setState(() {
-          _loadedAyahs = ayahs;
+          _loadedAyahs = results[0] as List<Ayah>;
+          _loadedTimings = results[1] as List<VerseTiming>;
           _isLoadingAyahs = false;
         });
       }
@@ -673,14 +679,33 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
 
-  int _calculateActiveAyahIndex(Duration position, Duration duration, List<Ayah> ayahs) {
+  int _calculateActiveAyahIndex(
+    Duration position,
+    Duration duration,
+    List<Ayah> ayahs,
+    List<VerseTiming> timings,
+  ) {
     if (ayahs.isEmpty) return 1;
-    if (duration.inMilliseconds <= 0 || position.inMilliseconds <= 0) return 1;
+    final posMs = position.inMilliseconds;
 
-    final progress = (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
+    // 1. Exact Millisecond Timestamp Sync (Quran.com & Quranify standard)
+    if (timings.isNotEmpty) {
+      for (final t in timings) {
+        if (posMs >= t.timestampFrom && posMs < t.timestampTo) {
+          return t.verseNumber;
+        }
+      }
+      if (posMs >= timings.last.timestampTo) {
+        return timings.last.verseNumber;
+      }
+      return timings.first.verseNumber;
+    }
+
+    // 2. Fallback: Weighted syllable/character pacing algorithm
+    if (duration.inMilliseconds <= 0 || posMs <= 0) return 1;
+    final progress = (posMs / duration.inMilliseconds).clamp(0.0, 1.0);
     if (progress >= 0.999) return ayahs.length;
 
-    // Calculate length weights based on clean Arabic text for realistic recitation tempo
     final weights = ayahs.map((a) {
       final cleanLen = a.textArabic.replaceAll(RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED]'), '').trim().length;
       return math.max(cleanLen, 8).toDouble();
@@ -701,9 +726,27 @@ class _PlayerScreenState extends State<PlayerScreen> {
     return ayahs.last.numberInSurah;
   }
 
-  Duration _calculateAyahSeekPosition(int index, Duration duration, List<Ayah> ayahs) {
-    if (ayahs.isEmpty || duration.inMilliseconds <= 0) return Duration.zero;
+  Duration _calculateAyahSeekPosition(
+    int index,
+    Duration duration,
+    List<Ayah> ayahs,
+    List<VerseTiming> timings,
+  ) {
+    if (ayahs.isEmpty) return Duration.zero;
     if (index <= 0) return Duration.zero;
+
+    // 1. Exact millisecond seek
+    if (timings.isNotEmpty) {
+      final targetVerse = index + 1;
+      final found = timings.firstWhere(
+        (t) => t.verseNumber == targetVerse,
+        orElse: () => timings[index.clamp(0, timings.length - 1)],
+      );
+      return Duration(milliseconds: found.timestampFrom);
+    }
+
+    // 2. Fallback weighted seek
+    if (duration.inMilliseconds <= 0) return Duration.zero;
     if (index >= ayahs.length) return duration;
 
     final weights = ayahs.map((a) {
@@ -744,11 +787,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
             });
           }
 
-          // Syllable/Character Weighted Active Ayah Calculation
+          // Millisecond Accurate / Character-Weighted Active Ayah Calculation
           final activeAyahIndex = _calculateActiveAyahIndex(
             player.position,
             player.duration,
             _loadedAyahs,
+            _loadedTimings,
           );
 
           // Active backsound id
@@ -1022,7 +1066,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
                               return InkWell(
                                 onTap: () {
-                                  final seekPos = _calculateAyahSeekPosition(index, player.duration, ayahs);
+                                  final seekPos = _calculateAyahSeekPosition(index, player.duration, ayahs, _loadedTimings);
                                   player.seek(seekPos);
                                 },
                                 borderRadius: BorderRadius.circular(14),

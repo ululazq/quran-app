@@ -106,8 +106,56 @@ class QuranApiService extends ChangeNotifier {
   }
 
   final Map<int, List<Ayah>> _ayahsCache = {};
+  final Map<String, List<VerseTiming>> _verseTimingsCache = {};
   bool _isLoadingAyahs = false;
   bool get isLoadingAyahs => _isLoadingAyahs;
+
+  int? _getQuranComReciterId(Qari qari) {
+    final server = qari.server.toLowerCase();
+    final name = qari.name.toLowerCase();
+
+    if (server.contains('/afs/') || name.contains('alafasy') || name.contains('mishary')) return 7;
+    if (server.contains('/basit/') || name.contains('abdul basit') || name.contains('abdulsamad')) return 2;
+    if (server.contains('/sds/') || name.contains('sudais')) return 3;
+    if (server.contains('/shatri/') || name.contains('shatri')) return 4;
+    if (server.contains('/rifai/') || name.contains('rifai')) return 5;
+    if (server.contains('/husr/') || name.contains('hussary') || name.contains('husary')) return 6;
+    if (server.contains('/minsh/') || name.contains('minshawi')) return 9;
+    if (server.contains('/shur/') || name.contains('shuraim')) return 10;
+    if (server.contains('/tblawi/') || name.contains('tablawi')) return 11;
+    return null;
+  }
+
+  /// Mendapatkan exact millisecond timing per ayat dari database Quran.com (Metode Quranify)
+  Future<List<VerseTiming>> loadVerseTimings(int surahNumber, Qari qari) async {
+    final reciterId = _getQuranComReciterId(qari);
+    if (reciterId == null) return [];
+
+    final cacheKey = '$reciterId-$surahNumber';
+    if (_verseTimingsCache.containsKey(cacheKey)) {
+      return _verseTimingsCache[cacheKey]!;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('https://api.quran.com/api/v4/chapter_recitations/$reciterId/$surahNumber?segments=true'),
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final audioFile = data['audio_file'] as Map<String, dynamic>?;
+        final list = audioFile?['verse_timings'] as List? ?? [];
+        final timings = list.map((e) => VerseTiming.fromJson(e as Map<String, dynamic>)).toList();
+        if (timings.isNotEmpty) {
+          _verseTimingsCache[cacheKey] = timings;
+          return timings;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading verse timings for surah $surahNumber: $e');
+    }
+    return [];
+  }
 
   /// Mendapatkan teks Arab dan terjemahan Indonesia untuk setiap ayat
   Future<List<Ayah>> loadAyahs(int surahNumber) async {

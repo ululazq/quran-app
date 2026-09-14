@@ -960,7 +960,7 @@ class _SettingsViewState extends State<_SettingsView> {
               ),
               const SizedBox(height: 14),
               const Text(
-                'Sumber API: MP3Quran.net & AlQuran.cloud\nVersi: 1.0.0 Stable Pro Max',
+                'Sumber API: MP3Quran.net, AlQuran.cloud & Quran.com\nVersi: 1.0.1 (Build 2) Stable Pro Max',
                 style: TextStyle(color: AppTheme.textTertiary, fontSize: 12),
               ),
             ],
@@ -1024,7 +1024,7 @@ class _SettingsViewState extends State<_SettingsView> {
                     style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 2),
-                  Text('Dibuat oleh ululazq • Versi 1.0.0', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                  Text('Dibuat oleh ululazq • Versi 1.0.1 (Build 2)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                 ],
               ),
             ],
