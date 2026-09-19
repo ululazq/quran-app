@@ -16,7 +16,6 @@ enum QuranLoopMode {
 
 class AudioPlayerService extends ChangeNotifier {
   final AudioPlayer _quranPlayer = AudioPlayer();
-  final Map<String, ap.AudioPlayer> _backsounds = {};
 
   List<Surah> _surahList = [];
   Surah? _currentSurah;
@@ -360,7 +359,26 @@ class AudioPlayerService extends ChangeNotifier {
     await seek(_position - const Duration(seconds: 10));
   }
 
-  // === Backsound Management ===
+  // === Gapless Dual-Player Looper for Backsound ===
+  ap.AudioPlayer? _ambientPlayerA;
+  ap.AudioPlayer? _ambientPlayerB;
+  int _activeAmbientPlayerIndex = 0; // 0 = Player A, 1 = Player B
+  Timer? _ambientLoopTimer;
+  Timer? _ambientFadeTimer;
+  String? _currentBacksoundAssetPath;
+  Duration _currentBacksoundDuration = const Duration(seconds: 90);
+  DateTime? _ambientPlayStartTime;
+  Duration _ambientRemainingWhenPaused = Duration.zero;
+
+  static const Map<String, Duration> _presetDurations = {
+    'rain': Duration(milliseconds: 98940),
+    'ocean': Duration(milliseconds: 96660),
+    'wind': Duration(milliseconds: 71420),
+    'birds': Duration(milliseconds: 113120),
+    'night': Duration(milliseconds: 170540),
+    'fireplace': Duration(milliseconds: 123400),
+  };
+
   final Set<String> _activeBacksoundIds = {};
   final Set<String> _loadingBacksoundIds = {};
 
@@ -368,24 +386,125 @@ class AudioPlayerService extends ChangeNotifier {
   bool isBacksoundLoading(String id) => _loadingBacksoundIds.contains(id);
   double getBacksoundVolume(String id) => _ambientVolume;
 
-  Future<void> _pauseActiveBacksounds() async {
-    for (final id in _activeBacksoundIds) {
-      try {
-        await _backsounds[id]?.pause();
-      } catch (e) {
-        debugPrint('Error pausing backsound $id: $e');
+  Future<void> _initAmbientPlayersIfNeeded() async {
+    if (_ambientPlayerA == null) {
+      _ambientPlayerA = ap.AudioPlayer();
+      await _ambientPlayerA!.setAudioContext(_backsoundAudioContext);
+      await _ambientPlayerA!.setReleaseMode(ap.ReleaseMode.stop);
+      _ambientPlayerA!.onPlayerComplete.listen((_) {
+        if (_activeAmbientPlayerIndex == 0 && _activeBacksoundIds.isNotEmpty && _isPlaying) {
+          _crossfadeToNextAmbientPlayer();
+        }
+      });
+    }
+    if (_ambientPlayerB == null) {
+      _ambientPlayerB = ap.AudioPlayer();
+      await _ambientPlayerB!.setAudioContext(_backsoundAudioContext);
+      await _ambientPlayerB!.setReleaseMode(ap.ReleaseMode.stop);
+      _ambientPlayerB!.onPlayerComplete.listen((_) {
+        if (_activeAmbientPlayerIndex == 1 && _activeBacksoundIds.isNotEmpty && _isPlaying) {
+          _crossfadeToNextAmbientPlayer();
+        }
+      });
+    }
+  }
+
+  void _scheduleNextAmbientLoop(Duration delay) {
+    _ambientLoopTimer?.cancel();
+    final waitDuration = delay.isNegative ? Duration.zero : delay;
+    _ambientLoopTimer = Timer(waitDuration, () async {
+      if (_activeBacksoundIds.isEmpty || _currentBacksoundAssetPath == null) return;
+      await _crossfadeToNextAmbientPlayer();
+    });
+  }
+
+  Future<void> _crossfadeToNextAmbientPlayer() async {
+    if (_activeBacksoundIds.isEmpty || _currentBacksoundAssetPath == null) return;
+
+    final currentPlayer = _activeAmbientPlayerIndex == 0 ? _ambientPlayerA : _ambientPlayerB;
+    final nextPlayer = _activeAmbientPlayerIndex == 0 ? _ambientPlayerB : _ambientPlayerA;
+
+    if (currentPlayer == null || nextPlayer == null) return;
+
+    try {
+      await nextPlayer.seek(Duration.zero);
+      await nextPlayer.setVolume(0.0);
+      if (_isPlaying) {
+        await nextPlayer.play(ap.AssetSource(_currentBacksoundAssetPath!));
       }
+    } catch (e) {
+      debugPrint('Error starting next ambient player: $e');
+    }
+
+    const crossfadeMs = 2000;
+    const steps = 20;
+    const stepDuration = Duration(milliseconds: crossfadeMs ~/ steps);
+    int currentStep = 0;
+
+    _ambientFadeTimer?.cancel();
+    _ambientFadeTimer = Timer.periodic(stepDuration, (timer) async {
+      currentStep++;
+      final t = (currentStep / steps).clamp(0.0, 1.0);
+
+      final volNext = _ambientVolume * t;
+      final volCurrent = _ambientVolume * (1.0 - t);
+
+      try {
+        await nextPlayer.setVolume(volNext);
+        await currentPlayer.setVolume(volCurrent);
+      } catch (_) {}
+
+      if (currentStep >= steps) {
+        timer.cancel();
+        try {
+          await currentPlayer.stop();
+          await nextPlayer.setVolume(_ambientVolume);
+        } catch (_) {}
+      }
+    });
+
+    _activeAmbientPlayerIndex = 1 - _activeAmbientPlayerIndex;
+    _ambientPlayStartTime = DateTime.now();
+
+    const crossfadeDuration = Duration(milliseconds: 2000);
+    final leadTime = _currentBacksoundDuration - crossfadeDuration;
+    _scheduleNextAmbientLoop(leadTime);
+  }
+
+  Future<void> _pauseActiveBacksounds() async {
+    if (_ambientPlayStartTime != null) {
+      final elapsed = DateTime.now().difference(_ambientPlayStartTime!);
+      const crossfadeDuration = Duration(milliseconds: 2000);
+      final leadTime = _currentBacksoundDuration - crossfadeDuration;
+      final remaining = leadTime - elapsed;
+      _ambientRemainingWhenPaused = remaining.isNegative ? Duration.zero : remaining;
+    }
+    _ambientLoopTimer?.cancel();
+    _ambientFadeTimer?.cancel();
+
+    try {
+      await _ambientPlayerA?.pause();
+      await _ambientPlayerB?.pause();
+    } catch (e) {
+      debugPrint('Error pausing ambient players: $e');
     }
   }
 
   Future<void> _resumeActiveBacksounds() async {
-    for (final id in _activeBacksoundIds) {
-      try {
-        await _backsounds[id]?.resume();
-      } catch (e) {
-        debugPrint('Error resuming backsound $id: $e');
-      }
+    if (_activeBacksoundIds.isEmpty) return;
+
+    final activePlayer = _activeAmbientPlayerIndex == 0 ? _ambientPlayerA : _ambientPlayerB;
+    try {
+      await activePlayer?.setVolume(_ambientVolume);
+      await activePlayer?.resume();
+    } catch (e) {
+      debugPrint('Error resuming active ambient player: $e');
     }
+
+    _ambientPlayStartTime = DateTime.now();
+    const crossfadeDuration = Duration(milliseconds: 2000);
+    final defaultLeadTime = _currentBacksoundDuration - crossfadeDuration;
+    _scheduleNextAmbientLoop(_ambientRemainingWhenPaused > Duration.zero ? _ambientRemainingWhenPaused : defaultLeadTime);
   }
 
   Future<void> toggleBacksound(Backsound backsound) async {
@@ -408,24 +527,36 @@ class AudioPlayerService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      ap.AudioPlayer? player = _backsounds[backsound.id];
-      if (player == null) {
-        player = ap.AudioPlayer();
-        _backsounds[backsound.id] = player;
-        await player.setAudioContext(_backsoundAudioContext);
-        await player.setReleaseMode(ap.ReleaseMode.loop);
-      } else {
-        await player.setAudioContext(_backsoundAudioContext);
-      }
-      
+      await _initAmbientPlayersIfNeeded();
+      _ambientLoopTimer?.cancel();
+      _ambientFadeTimer?.cancel();
+      await _ambientPlayerA?.stop();
+      await _ambientPlayerB?.stop();
+
       final relativeAssetPath = backsound.assetPath.startsWith('assets/')
           ? backsound.assetPath.substring(7)
           : backsound.assetPath;
 
-      await player.setVolume(_ambientVolume);
-      await player.play(ap.AssetSource(relativeAssetPath));
+      _currentBacksoundAssetPath = relativeAssetPath;
+      _currentBacksoundDuration = _presetDurations[backsound.id] ?? const Duration(seconds: 90);
+      _activeAmbientPlayerIndex = 0;
+
+      await _ambientPlayerA!.setVolume(_ambientVolume);
+      await _ambientPlayerA!.play(ap.AssetSource(relativeAssetPath));
+
+      _ambientPlayerA!.getDuration().then((dur) {
+        if (dur != null && dur > const Duration(seconds: 10)) {
+          _currentBacksoundDuration = dur;
+        }
+      });
+
       if (!_isPlaying) {
-        await player.pause();
+        await _ambientPlayerA!.pause();
+      } else {
+        _ambientPlayStartTime = DateTime.now();
+        const crossfadeDuration = Duration(milliseconds: 2000);
+        final leadTime = _currentBacksoundDuration - crossfadeDuration;
+        _scheduleNextAmbientLoop(leadTime);
       }
     } catch (e) {
       debugPrint('Error playing backsound ${backsound.id}: $e');
@@ -439,12 +570,16 @@ class AudioPlayerService extends ChangeNotifier {
   Future<void> stopBacksound(String id) async {
     _activeBacksoundIds.remove(id);
     _loadingBacksoundIds.remove(id);
+    _ambientLoopTimer?.cancel();
+    _ambientFadeTimer?.cancel();
+    _currentBacksoundAssetPath = null;
     notifyListeners();
 
     try {
-      await _backsounds[id]?.stop();
+      await _ambientPlayerA?.stop();
+      await _ambientPlayerB?.stop();
     } catch (e) {
-      debugPrint('Error stopping backsound $id: $e');
+      debugPrint('Error stopping ambient players: $e');
     }
   }
 
@@ -456,12 +591,11 @@ class AudioPlayerService extends ChangeNotifier {
 
   Future<void> setAmbientVolume(double volume) async {
     _ambientVolume = volume.clamp(0.0, 1.0);
-    for (final id in _activeBacksoundIds) {
-      try {
-        await _backsounds[id]?.setVolume(_ambientVolume);
-      } catch (e) {
-        debugPrint('Error setting ambient volume for $id: $e');
-      }
+    final activePlayer = _activeAmbientPlayerIndex == 0 ? _ambientPlayerA : _ambientPlayerB;
+    try {
+      await activePlayer?.setVolume(_ambientVolume);
+    } catch (e) {
+      debugPrint('Error setting ambient volume: $e');
     }
     notifyListeners();
   }
@@ -471,12 +605,15 @@ class AudioPlayerService extends ChangeNotifier {
   }
 
   void stopAllBacksounds() {
-    for (final id in _activeBacksoundIds.toList()) {
-      _backsounds[id]?.stop();
-    }
     _activeBacksoundIds.clear();
     _loadingBacksoundIds.clear();
+    _ambientLoopTimer?.cancel();
+    _ambientFadeTimer?.cancel();
+    _currentBacksoundAssetPath = null;
     notifyListeners();
+
+    _ambientPlayerA?.stop();
+    _ambientPlayerB?.stop();
   }
 
   void _startPositionTimer() {
@@ -500,10 +637,11 @@ class AudioPlayerService extends ChangeNotifier {
   void dispose() {
     _positionTimer?.cancel();
     _sleepTimer?.cancel();
+    _ambientLoopTimer?.cancel();
+    _ambientFadeTimer?.cancel();
     _quranPlayer.dispose();
-    for (final player in _backsounds.values) {
-      player.dispose();
-    }
+    _ambientPlayerA?.dispose();
+    _ambientPlayerB?.dispose();
     super.dispose();
   }
 }
