@@ -308,12 +308,12 @@ class AudioPlayerService extends ChangeNotifier {
   Future<void> pause() async {
     _isPlaying = false;
     notifyListeners();
+    await _pauseActiveBacksounds();
     try {
       await _quranPlayer.pause();
     } catch (e) {
       debugPrint('Error pausing audio: $e');
     }
-    await _pauseActiveBacksounds();
     _positionTimer?.cancel();
     notifyListeners();
   }
@@ -334,12 +334,12 @@ class AudioPlayerService extends ChangeNotifier {
   Future<void> stop() async {
     _isPlaying = false;
     notifyListeners();
+    await _pauseActiveBacksounds();
     try {
       await _quranPlayer.stop();
     } catch (e) {
       debugPrint('Error stopping audio: $e');
     }
-    await _pauseActiveBacksounds();
     _positionTimer?.cancel();
     _position = Duration.zero;
     _currentSurah = null;
@@ -411,15 +411,16 @@ class AudioPlayerService extends ChangeNotifier {
 
   void _scheduleNextAmbientLoop(Duration delay) {
     _ambientLoopTimer?.cancel();
+    if (!_isPlaying || _activeBacksoundIds.isEmpty || _currentBacksoundAssetPath == null) return;
     final waitDuration = delay.isNegative ? Duration.zero : delay;
     _ambientLoopTimer = Timer(waitDuration, () async {
-      if (_activeBacksoundIds.isEmpty || _currentBacksoundAssetPath == null) return;
+      if (!_isPlaying || _activeBacksoundIds.isEmpty || _currentBacksoundAssetPath == null) return;
       await _crossfadeToNextAmbientPlayer();
     });
   }
 
   Future<void> _crossfadeToNextAmbientPlayer() async {
-    if (_activeBacksoundIds.isEmpty || _currentBacksoundAssetPath == null) return;
+    if (!_isPlaying || _activeBacksoundIds.isEmpty || _currentBacksoundAssetPath == null) return;
 
     final currentPlayer = _activeAmbientPlayerIndex == 0 ? _ambientPlayerA : _ambientPlayerB;
     final nextPlayer = _activeAmbientPlayerIndex == 0 ? _ambientPlayerB : _ambientPlayerA;
@@ -443,6 +444,15 @@ class AudioPlayerService extends ChangeNotifier {
 
     _ambientFadeTimer?.cancel();
     _ambientFadeTimer = Timer.periodic(stepDuration, (timer) async {
+      if (!_isPlaying) {
+        timer.cancel();
+        try {
+          await nextPlayer.setVolume(0.0);
+          await currentPlayer.setVolume(0.0);
+        } catch (_) {}
+        return;
+      }
+
       currentStep++;
       final t = (currentStep / steps).clamp(0.0, 1.0);
 
@@ -458,7 +468,9 @@ class AudioPlayerService extends ChangeNotifier {
         timer.cancel();
         try {
           await currentPlayer.stop();
-          await nextPlayer.setVolume(_ambientVolume);
+          if (_isPlaying) {
+            await nextPlayer.setVolume(_ambientVolume);
+          }
         } catch (_) {}
       }
     });
@@ -482,23 +494,46 @@ class AudioPlayerService extends ChangeNotifier {
     _ambientLoopTimer?.cancel();
     _ambientFadeTimer?.cancel();
 
+    // 1. Mute both players immediately so zero audio leaks out
+    try {
+      await _ambientPlayerA?.setVolume(0.0);
+    } catch (_) {}
+    try {
+      await _ambientPlayerB?.setVolume(0.0);
+    } catch (_) {}
+
+    // 2. Pause each player independently to guarantee both receive pause command
     try {
       await _ambientPlayerA?.pause();
+    } catch (e) {
+      debugPrint('Error pausing ambientPlayerA: $e');
+    }
+    try {
       await _ambientPlayerB?.pause();
     } catch (e) {
-      debugPrint('Error pausing ambient players: $e');
+      debugPrint('Error pausing ambientPlayerB: $e');
     }
   }
 
   Future<void> _resumeActiveBacksounds() async {
-    if (_activeBacksoundIds.isEmpty) return;
+    if (_activeBacksoundIds.isEmpty || !_isPlaying || _currentBacksoundAssetPath == null) return;
 
     final activePlayer = _activeAmbientPlayerIndex == 0 ? _ambientPlayerA : _ambientPlayerB;
+    final otherPlayer = _activeAmbientPlayerIndex == 0 ? _ambientPlayerB : _ambientPlayerA;
+
+    try {
+      await otherPlayer?.setVolume(0.0);
+      await otherPlayer?.pause();
+    } catch (_) {}
+
     try {
       await activePlayer?.setVolume(_ambientVolume);
       await activePlayer?.resume();
     } catch (e) {
       debugPrint('Error resuming active ambient player: $e');
+      try {
+        await activePlayer?.play(ap.AssetSource(_currentBacksoundAssetPath!));
+      } catch (_) {}
     }
 
     _ambientPlayStartTime = DateTime.now();
@@ -541,23 +576,24 @@ class AudioPlayerService extends ChangeNotifier {
       _currentBacksoundDuration = _presetDurations[backsound.id] ?? const Duration(seconds: 90);
       _activeAmbientPlayerIndex = 0;
 
-      await _ambientPlayerA!.setVolume(_ambientVolume);
-      await _ambientPlayerA!.play(ap.AssetSource(relativeAssetPath));
+      if (!_isPlaying) {
+        await _ambientPlayerA!.setVolume(0.0);
+        await _ambientPlayerA!.play(ap.AssetSource(relativeAssetPath));
+        await _ambientPlayerA!.pause();
+      } else {
+        await _ambientPlayerA!.setVolume(_ambientVolume);
+        await _ambientPlayerA!.play(ap.AssetSource(relativeAssetPath));
+        _ambientPlayStartTime = DateTime.now();
+        const crossfadeDuration = Duration(milliseconds: 2000);
+        final leadTime = _currentBacksoundDuration - crossfadeDuration;
+        _scheduleNextAmbientLoop(leadTime);
+      }
 
       _ambientPlayerA!.getDuration().then((dur) {
         if (dur != null && dur > const Duration(seconds: 10)) {
           _currentBacksoundDuration = dur;
         }
       });
-
-      if (!_isPlaying) {
-        await _ambientPlayerA!.pause();
-      } else {
-        _ambientPlayStartTime = DateTime.now();
-        const crossfadeDuration = Duration(milliseconds: 2000);
-        final leadTime = _currentBacksoundDuration - crossfadeDuration;
-        _scheduleNextAmbientLoop(leadTime);
-      }
     } catch (e) {
       debugPrint('Error playing backsound ${backsound.id}: $e');
       _activeBacksoundIds.remove(backsound.id);
