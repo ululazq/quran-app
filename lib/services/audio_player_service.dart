@@ -367,6 +367,7 @@ class AudioPlayerService extends ChangeNotifier {
   Timer? _ambientFadeTimer;
   String? _currentBacksoundAssetPath;
   Duration _currentBacksoundDuration = const Duration(seconds: 90);
+  Duration _currentLoopTargetDuration = const Duration(seconds: 90);
   DateTime? _ambientPlayStartTime;
   Duration _ambientRemainingWhenPaused = Duration.zero;
 
@@ -427,14 +428,31 @@ class AudioPlayerService extends ChangeNotifier {
 
     if (currentPlayer == null || nextPlayer == null) return;
 
+    bool nextPlayerStarted = false;
     try {
-      await nextPlayer.seek(Duration.zero);
       await nextPlayer.setVolume(0.0);
       if (_isPlaying) {
-        await nextPlayer.play(ap.AssetSource(_currentBacksoundAssetPath!));
+        await nextPlayer.play(
+          ap.AssetSource(_currentBacksoundAssetPath!),
+          volume: 0.0,
+        );
+        nextPlayerStarted = true;
+        nextPlayer.getDuration().then((dur) {
+          if (dur != null && dur > const Duration(seconds: 10)) {
+            _currentBacksoundDuration = dur;
+          }
+        });
       }
     } catch (e) {
       debugPrint('Error starting next ambient player: $e');
+    }
+
+    if (!nextPlayerStarted) {
+      debugPrint('Warning: Next ambient player failed to start, keeping current player active.');
+      try {
+        await currentPlayer.setVolume(_ambientVolume);
+      } catch (_) {}
+      return;
     }
 
     const crossfadeMs = 2000;
@@ -477,18 +495,18 @@ class AudioPlayerService extends ChangeNotifier {
 
     _activeAmbientPlayerIndex = 1 - _activeAmbientPlayerIndex;
     _ambientPlayStartTime = DateTime.now();
+    _ambientRemainingWhenPaused = Duration.zero;
 
     const crossfadeDuration = Duration(milliseconds: 2000);
     final leadTime = _currentBacksoundDuration - crossfadeDuration;
+    _currentLoopTargetDuration = leadTime;
     _scheduleNextAmbientLoop(leadTime);
   }
 
   Future<void> _pauseActiveBacksounds() async {
     if (_ambientPlayStartTime != null) {
       final elapsed = DateTime.now().difference(_ambientPlayStartTime!);
-      const crossfadeDuration = Duration(milliseconds: 2000);
-      final leadTime = _currentBacksoundDuration - crossfadeDuration;
-      final remaining = leadTime - elapsed;
+      final remaining = _currentLoopTargetDuration - elapsed;
       _ambientRemainingWhenPaused = remaining.isNegative ? Duration.zero : remaining;
     }
     _ambientLoopTimer?.cancel();
@@ -539,7 +557,11 @@ class AudioPlayerService extends ChangeNotifier {
     _ambientPlayStartTime = DateTime.now();
     const crossfadeDuration = Duration(milliseconds: 2000);
     final defaultLeadTime = _currentBacksoundDuration - crossfadeDuration;
-    _scheduleNextAmbientLoop(_ambientRemainingWhenPaused > Duration.zero ? _ambientRemainingWhenPaused : defaultLeadTime);
+    final scheduleDelay = _ambientRemainingWhenPaused > Duration.zero
+        ? _ambientRemainingWhenPaused
+        : defaultLeadTime;
+    _currentLoopTargetDuration = scheduleDelay;
+    _scheduleNextAmbientLoop(scheduleDelay);
   }
 
   Future<void> toggleBacksound(Backsound backsound) async {
@@ -586,6 +608,7 @@ class AudioPlayerService extends ChangeNotifier {
         _ambientPlayStartTime = DateTime.now();
         const crossfadeDuration = Duration(milliseconds: 2000);
         final leadTime = _currentBacksoundDuration - crossfadeDuration;
+        _currentLoopTargetDuration = leadTime;
         _scheduleNextAmbientLoop(leadTime);
       }
 
